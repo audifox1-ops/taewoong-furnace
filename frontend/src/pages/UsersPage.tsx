@@ -1,24 +1,19 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
-import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
-import { UserPlus, Shield, User, Trash2, Eye, EyeOff } from 'lucide-react'
+import { UserPlus, User, Trash2, Eye, EyeOff } from 'lucide-react'
 
 export function UsersPage() {
-  const { user: currentUser } = useAuth()
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ username: '', password: '', role: 'user' })
   const [showPassword, setShowPassword] = useState(false)
 
-  const isAdmin = currentUser?.role === 'admin'
-
   const { data: users, isLoading } = useQuery({
     queryKey: ['users'],
     queryFn: () => api.get('/auth/users').then(r => r.data),
-    enabled: isAdmin,
   })
 
   const createMutation = useMutation({
@@ -29,9 +24,7 @@ export function UsersPage() {
       setForm({ username: '', password: '', role: 'user' })
       toast('success', '사용자가 생성되었습니다')
     },
-    onError: (err: any) => {
-      toast('error', err.response?.data?.message || '생성 실패')
-    },
+    onError: (err: any) => toast('error', err.response?.data?.message || '생성 실패'),
   })
 
   const deleteMutation = useMutation({
@@ -40,20 +33,8 @@ export function UsersPage() {
       queryClient.invalidateQueries({ queryKey: ['users'] })
       toast('success', '사용자가 삭제되었습니다')
     },
-    onError: (err: any) => {
-      toast('error', err.response?.data?.message || '삭제 실패')
-    },
+    onError: (err: any) => toast('error', err.response?.data?.message || '삭제 실패'),
   })
-
-  if (!isAdmin) {
-    return (
-      <div className="text-center py-12">
-        <Shield className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <h2 className="text-lg font-medium text-gray-900">관리자 전용</h2>
-        <p className="text-sm text-gray-500">이 페이지는 관리자만 접근할 수 있습니다.</p>
-      </div>
-    )
-  }
 
   return (
     <div>
@@ -86,9 +67,6 @@ export function UsersPage() {
                   <div className="flex items-center">
                     <User className="h-5 w-5 text-gray-400 mr-2" />
                     <span className="text-sm font-medium text-gray-900">{u.username}</span>
-                    {u.id === currentUser?.id && (
-                      <span className="ml-2 text-xs text-gray-400">(나)</span>
-                    )}
                   </div>
                 </td>
                 <td className="px-6 py-4">
@@ -99,15 +77,13 @@ export function UsersPage() {
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  {u.id !== currentUser?.id && (
-                    <button onClick={() => {
-                      if (confirm(`"${u.username}" 사용자를 삭제하시겠습니까?`)) {
-                        deleteMutation.mutate(u.id)
-                      }
-                    }} className="text-red-600 hover:text-red-900">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  )}
+                  <button onClick={() => {
+                    if (confirm(`"${u.username}" 사용자를 삭제하시겠습니까?`)) {
+                      deleteMutation.mutate(u.id)
+                    }
+                  }} className="text-red-600 hover:text-red-900">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </td>
               </tr>
             ))}
