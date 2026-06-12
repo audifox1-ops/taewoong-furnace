@@ -1,0 +1,95 @@
+import { useQuery } from '@tanstack/react-query'
+import api from '@/lib/api'
+import { Factory, FileText, FileSpreadsheet, Table, Upload, Zap, Calendar } from 'lucide-react'
+import { Link } from 'react-router-dom'
+
+export function DashboardPage() {
+  const { data: furnaces } = useQuery({
+    queryKey: ['furnaces'],
+    queryFn: () => api.get('/furnaces').then((res) => res.data),
+  })
+
+  const { data: stats } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: () => api.get('/analysis/dashboard').then((res) => res.data),
+  })
+
+  const statCards = [
+    { name: '가열로 수', value: stats?.furnaceCount ?? 19, icon: Factory, href: '/gas-readings', color: 'bg-blue-500' },
+    { name: '가스 리딩', value: stats?.gasReadingCount?.toLocaleString() ?? '-', icon: FileText, href: '/gas-readings', color: 'bg-green-500' },
+    { name: '차지 기록', value: stats?.chargeCount?.toLocaleString() ?? '-', icon: Table, href: '/charges', color: 'bg-yellow-500' },
+    { name: '오늘 차지', value: stats?.todayCharges ?? 0, icon: Calendar, href: '/charges', color: 'bg-orange-500' },
+    { name: '전체 사용량', value: stats?.totalUsage ? `${stats.totalUsage.toFixed(1)}` : '-', icon: Zap, href: '/analysis', color: 'bg-red-500' },
+    { name: '장입도 PDF', value: stats?.scanCount ?? 0, icon: Upload, href: '/uploads', color: 'bg-purple-500' },
+  ]
+
+  return (
+    <div>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">대시보드</h1>
+
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6 mb-8">
+        {statCards.map((item) => (
+          <Link key={item.name} to={item.href}
+            className="relative overflow-hidden rounded-lg bg-white px-4 py-5 shadow hover:shadow-md transition-shadow">
+            <div className={`absolute rounded-md p-2 ${item.color}`}>
+              <item.icon className="h-5 w-5 text-white" />
+            </div>
+            <p className="ml-12 truncate text-xs font-medium text-gray-500">{item.name}</p>
+            <p className="ml-12 mt-1 text-xl font-bold text-gray-900">{item.value}</p>
+          </Link>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="bg-white shadow rounded-lg p-6">
+          <h2 className="text-lg font-medium text-gray-900 mb-4">바로가기</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <Link to="/gas-upload"
+              className="flex items-center p-3 border rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors">
+              <FileSpreadsheet className="h-5 w-5 text-teal-600 mr-2" />
+              <span className="text-sm font-medium text-gray-700">가스 데이터 업로드</span>
+            </Link>
+            <Link to="/charges"
+              className="flex items-center p-3 border rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors">
+              <Table className="h-5 w-5 text-yellow-600 mr-2" />
+              <span className="text-sm font-medium text-gray-700">차지 사용량 입력</span>
+            </Link>
+            <Link to="/uploads"
+              className="flex items-center p-3 border rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors">
+              <Upload className="h-5 w-5 text-purple-600 mr-2" />
+              <span className="text-sm font-medium text-gray-700">장입도 PDF 업로드</span>
+            </Link>
+            <Link to="/analysis"
+              className="flex items-center p-3 border rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors">
+              <Zap className="h-5 w-5 text-red-600 mr-2" />
+              <span className="text-sm font-medium text-gray-700">분석 대시보드</span>
+            </Link>
+          </div>
+        </div>
+
+        <div className="bg-white shadow rounded-lg p-6">
+          <h2 className="text-lg font-medium text-gray-900 mb-4">가열로 목록</h2>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 max-h-48 overflow-auto">
+            {furnaces?.map((furnace: any) => (
+              <div key={furnace.id}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-center hover:border-blue-500 transition-colors cursor-pointer">
+                <p className="text-sm font-medium text-gray-900">{furnace.name}</p>
+                <p className="text-xs text-gray-500">{furnace.no}호기</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white shadow rounded-lg p-6">
+        <h2 className="text-lg font-medium text-gray-900 mb-2">가스 사용량 계산 규칙</h2>
+        <div className="text-sm text-gray-600 space-y-1">
+          <p><strong>사용량</strong> = 사용후(가스누적지침) − 사용전(가스누적지침)</p>
+          <p><strong>기준값</strong>: <code>가스누적지침</code> (적산계 누적값). <code>가스</code> 컬럼이 아님.</p>
+          <p><strong>교대시간</strong>: 주간 08:00~19:30 / 야간 20:00~익일 07:00</p>
+          <p><strong>시작점 우선순위</strong>: (1) 직전 작업 종료 시각 (2) 근무 시작 경계</p>
+        </div>
+      </div>
+    </div>
+  )
+}

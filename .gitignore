@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+.env
+.env.local
+*.db
+*.db-journal
+.DS_Store
+*.log
+coverage/
+.cache/
+samples/node_modules/
