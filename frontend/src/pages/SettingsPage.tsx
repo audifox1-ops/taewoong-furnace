@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 import { Settings, Clock, Save, RotateCcw } from 'lucide-react'
 
@@ -33,11 +32,8 @@ function saveConfig(config: ShiftConfig) {
 }
 
 export function SettingsPage() {
-  const { user } = useAuth()
   const { toast } = useToast()
   const [config, setConfig] = useState<ShiftConfig>(loadConfig)
-
-  const isAdmin = user?.role === 'admin'
 
   const handleSave = () => {
     saveConfig(config)
@@ -70,7 +66,6 @@ export function SettingsPage() {
       <h1 className="text-2xl font-bold text-gray-900 mb-6">설정</h1>
 
       <div className="max-w-2xl space-y-6">
-        {/* Shift Configuration */}
         <div className="bg-white shadow rounded-lg p-6">
           <div className="flex items-center mb-4">
             <Clock className="h-5 w-5 text-blue-500 mr-2" />
@@ -88,15 +83,13 @@ export function SettingsPage() {
                   <label className="block text-xs text-gray-500">시작 시간</label>
                   <input type="time" value={config.dayStart}
                     onChange={(e) => setConfig({ ...config, dayStart: e.target.value })}
-                    disabled={!isAdmin}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm disabled:bg-gray-100" />
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-500">종료 시간</label>
                   <input type="time" value={config.dayEnd}
                     onChange={(e) => setConfig({ ...config, dayEnd: e.target.value })}
-                    disabled={!isAdmin}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm disabled:bg-gray-100" />
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" />
                 </div>
                 <p className="text-xs text-gray-400">
                   근무시간: {formatDuration(config.dayStart, config.dayEnd, false)}
@@ -114,15 +107,13 @@ export function SettingsPage() {
                   <label className="block text-xs text-gray-500">시작 시간</label>
                   <input type="time" value={config.nightStart}
                     onChange={(e) => setConfig({ ...config, nightStart: e.target.value })}
-                    disabled={!isAdmin}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm disabled:bg-gray-100" />
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-500">종료 시간</label>
                   <input type="time" value={config.nightEnd}
                     onChange={(e) => setConfig({ ...config, nightEnd: e.target.value })}
-                    disabled={!isAdmin}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm disabled:bg-gray-100" />
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" />
                 </div>
                 <p className="text-xs text-gray-400">
                   근무시간: {formatDuration(config.nightStart, config.nightEnd, true)}
@@ -136,37 +127,26 @@ export function SettingsPage() {
             <p className="mt-1">* 설정은 브라우저에 저장됩니다 (로컬 스토리지).</p>
           </div>
 
-          {isAdmin && (
-            <div className="mt-4 flex gap-2">
-              <button onClick={handleSave}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
-                <Save className="h-4 w-4 mr-1" />
-                저장
-              </button>
-              <button onClick={handleReset}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                <RotateCcw className="h-4 w-4 mr-1" />
-                기본값으로 초기화
-              </button>
-            </div>
-          )}
-
-          {!isAdmin && (
-            <p className="mt-4 text-xs text-gray-400">설정 변경은 관리자만 가능합니다.</p>
-          )}
+          <div className="mt-4 flex gap-2">
+            <button onClick={handleSave}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+              <Save className="h-4 w-4 mr-1" />
+              저장
+            </button>
+            <button onClick={handleReset}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+              <RotateCcw className="h-4 w-4 mr-1" />
+              기본값으로 초기화
+            </button>
+          </div>
         </div>
 
-        {/* Current User Info */}
         <div className="bg-white shadow rounded-lg p-6">
           <div className="flex items-center mb-4">
             <Settings className="h-5 w-5 text-gray-500 mr-2" />
             <h2 className="text-lg font-medium text-gray-900">시스템 정보</h2>
           </div>
           <dl className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <dt className="text-gray-500">현재 사용자</dt>
-              <dd className="font-medium text-gray-900">{user?.username} ({user?.role})</dd>
-            </div>
             <div>
               <dt className="text-gray-500">가열로 수</dt>
               <dd className="font-medium text-gray-900">19개 (7호기 제외)</dd>
