@@ -49,12 +49,12 @@ export function GasUploadPage() {
 
   const { data: uploadHistory } = useQuery({
     queryKey: ['upload-history'],
-    queryFn: () => api.get('/gas-readings/upload-history').then(r => r.data),
+    queryFn: () => api.get('/gas-readings/upload-history').then(r => Array.isArray(r.data) ? r.data : []),
   })
 
   const { data: furnaces } = useQuery({
     queryKey: ['furnaces'],
-    queryFn: () => api.get('/furnaces').then(r => r.data),
+    queryFn: () => api.get('/furnaces').then(r => Array.isArray(r.data) ? r.data : []),
   })
 
   const addFiles = useCallback((files: FileList | File[]) => {

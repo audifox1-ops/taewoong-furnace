@@ -40,12 +40,12 @@ export function UploadsPage() {
 
   const { data: furnaces } = useQuery({
     queryKey: ['furnaces'],
-    queryFn: () => api.get('/furnaces').then((res) => res.data),
+    queryFn: () => api.get('/furnaces').then((res) => Array.isArray(res.data) ? res.data : []),
   })
 
   const { data: scans, isLoading } = useQuery({
     queryKey: ['charge-scans'],
-    queryFn: () => api.get('/uploads/pdf').then((res) => res.data),
+    queryFn: () => api.get('/uploads/pdf').then((res) => Array.isArray(res.data) ? res.data : []),
   })
 
   const uploadMutation = useMutation({

@@ -16,7 +16,7 @@ export function MonthlyReportPage() {
 
   const { data: furnaces } = useQuery({
     queryKey: ['furnaces'],
-    queryFn: () => api.get('/furnaces').then(r => r.data),
+    queryFn: () => api.get('/furnaces').then(r => Array.isArray(r.data) ? r.data : []),
   })
 
   const { data: summary } = useQuery({
@@ -24,13 +24,13 @@ export function MonthlyReportPage() {
     queryFn: () => {
       const params = new URLSearchParams({ startDate, endDate })
       if (furnaceId) params.append('furnaceId', String(furnaceId))
-      return api.get(`/charges?${params.toString()}`).then(r => r.data)
+      return api.get(`/charges?${params.toString()}`).then(r => Array.isArray(r.data) ? r.data : [])
     },
   })
 
   const { data: usageByFurnace } = useQuery({
     queryKey: ['monthly-usage-by-furnace', yearMonth],
-    queryFn: () => api.get(`/analysis/usage-by-furnace?startDate=${startDate}&endDate=${endDate}`).then(r => r.data),
+    queryFn: () => api.get(`/analysis/usage-by-furnace?startDate=${startDate}&endDate=${endDate}`).then(r => Array.isArray(r.data) ? r.data : []),
   })
 
   const charges = Array.isArray(summary) ? summary : []

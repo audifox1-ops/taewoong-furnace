@@ -21,12 +21,12 @@ export function RematchPage() {
 
   const { data: unmatched, isLoading: loadingUnmatched } = useQuery({
     queryKey: ['unmatched-records'],
-    queryFn: () => api.get('/charges/unmatched').then(r => r.data),
+    queryFn: () => api.get('/charges/unmatched').then(r => Array.isArray(r.data) ? r.data : []),
   })
 
   const { data: allRecords } = useQuery({
     queryKey: ['charge-records'],
-    queryFn: () => api.get('/uploads/charge-records').then(r => r.data),
+    queryFn: () => api.get('/uploads/charge-records').then(r => Array.isArray(r.data) ? r.data : []),
   })
 
   const rematchAllMutation = useMutation({

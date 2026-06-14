@@ -21,7 +21,7 @@ export function UsersPage() {
 
   const { data: users, isLoading } = useQuery({
     queryKey: ['users'],
-    queryFn: () => api.get('/auth/users').then(r => r.data),
+    queryFn: () => api.get('/auth/users').then(r => Array.isArray(r.data) ? r.data : []),
   })
 
   const createMutation = useMutation({

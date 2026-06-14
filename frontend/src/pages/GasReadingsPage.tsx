@@ -15,7 +15,7 @@ export function GasReadingsPage() {
 
   const { data: furnaces } = useQuery({
     queryKey: ['furnaces'],
-    queryFn: () => api.get('/furnaces').then((res) => res.data),
+    queryFn: () => api.get('/furnaces').then((res) => Array.isArray(res.data) ? res.data : []),
   })
 
   const { data, isLoading } = useQuery({

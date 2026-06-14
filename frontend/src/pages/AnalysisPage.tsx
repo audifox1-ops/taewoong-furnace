@@ -19,24 +19,24 @@ export function AnalysisPage() {
 
   const { data: furnaces } = useQuery({
     queryKey: ['furnaces'],
-    queryFn: () => api.get('/furnaces').then((res) => res.data),
+    queryFn: () => api.get('/furnaces').then((res) => Array.isArray(res.data) ? res.data : []),
   })
 
   const { data: usageTrend } = useQuery({
     queryKey: ['usage-trend', furnaceId, startDate, endDate],
-    queryFn: () => api.get(`/analysis/usage-trend?furnaceId=${furnaceId}&startDate=${startDate}&endDate=${endDate}`).then((res) => res.data),
+    queryFn: () => api.get(`/analysis/usage-trend?furnaceId=${furnaceId}&startDate=${startDate}&endDate=${endDate}`).then((res) => Array.isArray(res.data) ? res.data : []),
     enabled: !!furnaceId && tab === 'charts',
   })
 
   const { data: temperatureTrend } = useQuery({
     queryKey: ['temperature-trend', furnaceId, startDate, endDate],
-    queryFn: () => api.get(`/analysis/temperature-trend?furnaceId=${furnaceId}&startDate=${startDate}&endDate=${endDate}`).then((res) => res.data),
+    queryFn: () => api.get(`/analysis/temperature-trend?furnaceId=${furnaceId}&startDate=${startDate}&endDate=${endDate}`).then((res) => Array.isArray(res.data) ? res.data : []),
     enabled: !!furnaceId && tab === 'charts',
   })
 
   const { data: usageByFurnace } = useQuery({
     queryKey: ['usage-by-furnace', startDate, endDate],
-    queryFn: () => api.get(`/analysis/usage-by-furnace?startDate=${startDate}&endDate=${endDate}`).then((res) => res.data),
+    queryFn: () => api.get(`/analysis/usage-by-furnace?startDate=${startDate}&endDate=${endDate}`).then((res) => Array.isArray(res.data) ? res.data : []),
     enabled: tab === 'charts',
   })
 
@@ -53,7 +53,7 @@ export function AnalysisPage() {
       params.append('furnaceId', String(furnaceId))
       params.append('startDate', startDate)
       params.append('endDate', endDate + 'T23:59:59')
-      return api.get(`/charges?${params.toString()}`).then((res) => res.data)
+      return api.get(`/charges?${params.toString()}`).then((res) => Array.isArray(res.data) ? res.data : [])
     },
     enabled: tab === 'compare',
   })

@@ -7,7 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recha
 export function DashboardPage() {
   const { data: furnaces, error: furnacesError } = useQuery({
     queryKey: ['furnaces'],
-    queryFn: () => api.get('/furnaces').then((res) => res.data),
+    queryFn: () => api.get('/furnaces').then((res) => Array.isArray(res.data) ? res.data : []),
     retry: false,
   })
 
@@ -20,7 +20,7 @@ export function DashboardPage() {
   const today = new Date().toISOString().slice(0, 10)
   const { data: usageSummary } = useQuery({
     queryKey: ['usage-summary', today],
-    queryFn: () => api.get(`/charges/summary/usage?startDate=${today}&endDate=${today}T23:59:59`).then(r => r.data),
+    queryFn: () => api.get(`/charges/summary/usage?startDate=${today}&endDate=${today}T23:59:59`).then(r => Array.isArray(r.data) ? r.data : []),
     retry: false,
   })
 
