@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { useToast } from '@/components/Toast'
@@ -10,6 +10,14 @@ export function UsersPage() {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ username: '', password: '', role: 'user' })
   const [showPassword, setShowPassword] = useState(false)
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showForm) setShowForm(false)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [showForm])
 
   const { data: users, isLoading } = useQuery({
     queryKey: ['users'],
@@ -92,7 +100,7 @@ export function UsersPage() {
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-label="사용자 추가">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">사용자 추가</h3>
