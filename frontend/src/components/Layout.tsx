@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { ErrorBoundary } from './ErrorBoundary'
 import { 
   LayoutDashboard, 
@@ -30,7 +30,26 @@ const navigation = [
 
 export function Layout() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && !e.ctrlKey && !e.metaKey) {
+        const shortcuts: Record<string, string> = {
+          '1': '/', '2': '/gas-readings', '3': '/gas-upload',
+          '4': '/charges', '5': '/uploads', '6': '/rematch',
+          '7': '/analysis', '8': '/monthly-report', '9': '/settings',
+        }
+        if (shortcuts[e.key]) {
+          e.preventDefault()
+          navigate(shortcuts[e.key])
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [navigate])
 
   return (
     <div className="min-h-screen bg-gray-50">
