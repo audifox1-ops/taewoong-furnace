@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css'
 import 'react-pdf/dist/esm/Page/TextLayer.css'
@@ -34,6 +34,19 @@ export function PdfViewer({ url, onClose }: PdfViewerProps) {
   const zoomIn = () => setScale(s => Math.min(3, s + 0.2))
   const zoomOut = () => setScale(s => Math.max(0.4, s - 0.2))
   const rotate = () => setRotation(r => (r + 90) % 360)
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') goPrev()
+      else if (e.key === 'ArrowRight') goNext()
+      else if (e.key === '+' || e.key === '=') zoomIn()
+      else if (e.key === '-') zoomOut()
+      else if (e.key === 'r') rotate()
+      else if (e.key === 'Escape' && onClose) onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [numPages, onClose])
 
   return (
     <div className="flex flex-col h-full bg-gray-800 rounded-lg overflow-hidden">
