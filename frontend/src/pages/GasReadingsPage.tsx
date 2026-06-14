@@ -4,6 +4,7 @@ import api from '@/lib/api'
 import { format } from 'date-fns'
 import { Download, Filter } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { TableSkeleton } from '@/components/Skeleton'
 
 export function GasReadingsPage() {
   const [furnaceId, setFurnaceId] = useState<number | ''>('')
@@ -151,8 +152,8 @@ export function GasReadingsPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
-                    로딩 중...
+                  <td colSpan={8} className="px-6 py-12">
+                    <TableSkeleton rows={5} cols={8} />
                   </td>
                 </tr>
               ) : data?.data?.length === 0 ? (
