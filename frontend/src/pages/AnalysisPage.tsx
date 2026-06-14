@@ -211,9 +211,9 @@ export function AnalysisPage() {
       )}
 
       {tab === 'compare' && (
-        <div className="flex gap-6" style={{ minHeight: '70vh' }}>
+        <div className="flex flex-col md:flex-row gap-6" style={{ minHeight: '70vh' }}>
           {/* Left: charge list + detail cards */}
-          <div className="w-1/2 flex flex-col gap-4">
+          <div className="w-full md:w-1/2 flex flex-col gap-4">
             {/* Summary cards */}
             {selectedCharge && (
               <div className="bg-white shadow rounded-lg p-4">
@@ -287,7 +287,7 @@ export function AnalysisPage() {
           </div>
 
           {/* Right: PDF viewer or placeholder */}
-          <div className="w-1/2">
+          <div className="w-full md:w-1/2">
             {pdfUrl ? (
               <div className="h-full rounded-lg overflow-hidden shadow">
                 <PdfViewer url={pdfUrl} />

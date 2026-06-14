@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { Factory, FileText, FileSpreadsheet, Table, Upload, Zap, Calendar, AlertCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
 export function DashboardPage() {
   const { data: furnaces, error: furnacesError } = useQuery({
@@ -13,6 +14,13 @@ export function DashboardPage() {
   const { data: stats } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: () => api.get('/analysis/dashboard').then((res) => res.data),
+    retry: false,
+  })
+
+  const today = new Date().toISOString().slice(0, 10)
+  const { data: usageSummary } = useQuery({
+    queryKey: ['usage-summary', today],
+    queryFn: () => api.get(`/charges/summary/usage?startDate=${today}&endDate=${today}T23:59:59`).then(r => r.data),
     retry: false,
   })
 
@@ -50,6 +58,22 @@ export function DashboardPage() {
           </Link>
         ))}
       </div>
+
+      {Array.isArray(usageSummary) && usageSummary.length > 0 && (
+        <div className="bg-white shadow rounded-lg p-4 mb-6">
+          <h3 className="text-sm font-medium text-gray-700 mb-3">오늘의 호기별 사용량</h3>
+          <div className="h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={usageSummary.map((s: any) => ({ name: s.furnaceName, usage: Math.round(s.totalUsage) }))}>
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Bar dataKey="usage" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="bg-white shadow rounded-lg p-6">

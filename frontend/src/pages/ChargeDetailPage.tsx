@@ -121,9 +121,9 @@ export function ChargeDetailPage() {
         </div>
       </div>
 
-      <div className="flex gap-6" style={{ minHeight: '60vh' }}>
+      <div className="flex flex-col md:flex-row gap-6" style={{ minHeight: '60vh' }}>
         {/* Left: Charts */}
-        <div className="w-1/2 flex flex-col gap-4">
+        <div className="w-full md:w-1/2 flex flex-col gap-4">
           <div className="bg-white shadow rounded-lg p-4">
             <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
               <Zap className="h-4 w-4 mr-1 text-blue-500" />
@@ -172,7 +172,7 @@ export function ChargeDetailPage() {
         </div>
 
         {/* Right: PDF */}
-        <div className="w-1/2">
+        <div className="w-full md:w-1/2">
           {pdfUrl ? (
             <div className="h-full rounded-lg overflow-hidden shadow">
               <PdfViewer url={pdfUrl} />
