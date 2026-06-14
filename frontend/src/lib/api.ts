@@ -16,7 +16,16 @@ api.interceptors.request.use((config) => {
 })
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const d = response.data
+    if (d && typeof d === 'object' && !Array.isArray(d)) {
+      const keys = Object.keys(d)
+      if (keys.length === 1 && keys[0] === 'data' && Array.isArray(d.data)) {
+        response.data = d.data
+      }
+    }
+    return response
+  },
   (error) => {
     return Promise.reject(error)
   }
