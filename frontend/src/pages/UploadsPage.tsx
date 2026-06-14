@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { format } from 'date-fns'
@@ -25,6 +25,18 @@ export function UploadsPage() {
     weightKg: '',
     note: '',
   })
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (selectedScan) { setSelectedScan(null); setPdfUrl(null) }
+        else if (deleteId) setDeleteId(null)
+        else if (showRecordForm) setShowRecordForm(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedScan, deleteId, showRecordForm])
 
   const { data: furnaces } = useQuery({
     queryKey: ['furnaces'],
@@ -227,7 +239,7 @@ export function UploadsPage() {
       </div>
 
       {selectedScan && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-label="PDF 뷰어">
           <div className="bg-white rounded-lg shadow-xl w-[90vw] h-[90vh] flex flex-col overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
               <h3 className="text-lg font-medium text-gray-900">{selectedScan.originalFileName}</h3>
@@ -261,7 +273,7 @@ export function UploadsPage() {
       )}
 
       {showRecordForm && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-label="장입도 기록 추가">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
             <div className="px-4 py-3 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">장입도 기록 추가</h3>
