@@ -1,21 +1,25 @@
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
-import { Factory, FileText, FileSpreadsheet, Table, Upload, Zap, Calendar } from 'lucide-react'
+import { Factory, FileText, FileSpreadsheet, Table, Upload, Zap, Calendar, AlertCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 export function DashboardPage() {
-  const { data: furnaces } = useQuery({
+  const { data: furnaces, error: furnacesError } = useQuery({
     queryKey: ['furnaces'],
     queryFn: () => api.get('/furnaces').then((res) => res.data),
+    retry: false,
   })
 
   const { data: stats } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: () => api.get('/analysis/dashboard').then((res) => res.data),
+    retry: false,
   })
 
+  const furnaceList = Array.isArray(furnaces) ? furnaces : []
+
   const statCards = [
-    { name: '가열로 수', value: stats?.furnaceCount ?? 19, icon: Factory, href: '/gas-readings', color: 'bg-blue-500' },
+    { name: '가열로 수', value: stats?.furnaceCount ?? (furnaceList.length || 19), icon: Factory, href: '/gas-readings', color: 'bg-blue-500' },
     { name: '가스 리딩', value: stats?.gasReadingCount?.toLocaleString() ?? '-', icon: FileText, href: '/gas-readings', color: 'bg-green-500' },
     { name: '차지 기록', value: stats?.chargeCount?.toLocaleString() ?? '-', icon: Table, href: '/charges', color: 'bg-yellow-500' },
     { name: '오늘 차지', value: stats?.todayCharges ?? 0, icon: Calendar, href: '/charges', color: 'bg-orange-500' },
@@ -26,6 +30,13 @@ export function DashboardPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-900 mb-6">대시보드</h1>
+
+      {furnacesError && (
+        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center text-sm text-yellow-800">
+          <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0" />
+          백엔드 서버에 연결할 수 없습니다. 데이터 표시가 제한될 수 있습니다.
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6 mb-8">
         {statCards.map((item) => (
@@ -70,13 +81,20 @@ export function DashboardPage() {
         <div className="bg-white shadow rounded-lg p-6">
           <h2 className="text-lg font-medium text-gray-900 mb-4">가열로 목록</h2>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 max-h-48 overflow-auto">
-            {furnaces?.map((furnace: any) => (
+            {furnaceList.length > 0 ? furnaceList.map((furnace: any) => (
               <div key={furnace.id}
                 className="border border-gray-200 rounded-lg px-3 py-2 text-center hover:border-blue-500 transition-colors cursor-pointer">
                 <p className="text-sm font-medium text-gray-900">{furnace.name}</p>
                 <p className="text-xs text-gray-500">{furnace.no}호기</p>
               </div>
-            ))}
+            )) : (
+              [1,2,3,4,5,6,8,9,10,11,12,13,14,15,16,17,18,19,20].map(n => (
+                <div key={n} className="border border-gray-200 rounded-lg px-3 py-2 text-center">
+                  <p className="text-sm font-medium text-gray-900">가열{n}호</p>
+                  <p className="text-xs text-gray-500">{n}호기</p>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
