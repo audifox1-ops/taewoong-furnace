@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { format } from 'date-fns'
 import { Download, Filter } from 'lucide-react'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 export function GasReadingsPage() {
   const [furnaceId, setFurnaceId] = useState<number | ''>('')
@@ -110,6 +111,27 @@ export function GasReadingsPage() {
           </button>
         </div>
       </div>
+
+      {data?.data && data.data.length > 0 && (
+        <div className="bg-white shadow rounded-lg p-4 mb-6">
+          <h3 className="text-sm font-medium text-gray-700 mb-3">가스 누적지침 시계열</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={data.data.map((r: any) => ({
+                time: format(new Date(r.ts), 'HH:mm'),
+                gasCumulative: r.gasCumulative,
+                temp: r.temp,
+              }))}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="time" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} />
+                <Tooltip />
+                <Line type="monotone" dataKey="gasCumulative" stroke="#3B82F6" name="누적지침" dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white shadow rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
