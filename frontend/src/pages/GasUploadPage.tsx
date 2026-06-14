@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, Clock, Loader2 } from 'lucide-react'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 
 interface QueueItem {
   file: File
@@ -44,6 +45,7 @@ export function GasUploadPage() {
   const [queue, setQueue] = useState<QueueItem[]>([])
   const [duplicateMode, setDuplicateMode] = useState<'skip' | 'upsert'>('skip')
   const [isProcessing, setIsProcessing] = useState(false)
+  const [showUpsertConfirm, setShowUpsertConfirm] = useState(false)
 
   const { data: uploadHistory } = useQuery({
     queryKey: ['upload-history'],
@@ -84,6 +86,11 @@ export function GasUploadPage() {
   }
 
   const processQueue = async () => {
+    if (duplicateMode === 'upsert' && !showUpsertConfirm) {
+      setShowUpsertConfirm(true)
+      return
+    }
+    setShowUpsertConfirm(false)
     setIsProcessing(true)
     const pendingItems = queue.filter(q => q.status === 'pending')
 
@@ -252,6 +259,16 @@ export function GasUploadPage() {
           </table>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={showUpsertConfirm}
+        title="덮어쓰기 확인"
+        message="덮어쓰기 모드로 업로드하면 기존 데이터가 새로운 데이터로 대체됩니다. 계속하시겠습니까?"
+        confirmLabel="덮어쓰기"
+        danger
+        onConfirm={processQueue}
+        onCancel={() => setShowUpsertConfirm(false)}
+      />
     </div>
   )
 }

@@ -1,9 +1,11 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { format } from 'date-fns'
 import { Save, Trash2, Plus, Clipboard, AlertTriangle, Wand2, ExternalLink } from 'lucide-react'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { TableSkeleton } from '@/components/Skeleton'
 
 interface ChargeRow {
   id?: number
@@ -36,7 +38,23 @@ export function ChargesPage() {
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [autoFilling, setAutoFilling] = useState<number | null>(null)
+  const [deleteIndex, setDeleteIndex] = useState<number | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault()
+        if (hasUnsavedChanges) saveAll()
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault()
+        addRow()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [hasUnsavedChanges])
 
   const validateRow = (row: ChargeRow): string[] => {
     const errors: string[] = []
@@ -208,10 +226,16 @@ export function ChargesPage() {
   }
 
   const deleteRow = (index: number) => {
-    const row = rows[index]
+    setDeleteIndex(index)
+  }
+
+  const confirmDelete = () => {
+    if (deleteIndex === null) return
+    const row = rows[deleteIndex]
     if (row.id) deleteMutation.mutate(row.id)
-    setRows(prev => validateAllRows(prev.filter((_, i) => i !== index)))
+    setRows(prev => validateAllRows(prev.filter((_, i) => i !== deleteIndex)))
     setHasUnsavedChanges(true)
+    setDeleteIndex(null)
   }
 
   const saveAll = () => {
@@ -377,7 +401,7 @@ export function ChargesPage() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {isLoading ? (
-                <tr><td colSpan={9} className="px-4 py-12 text-center text-gray-500">로딩 중...</td></tr>
+                <tr><td colSpan={9} className="px-4 py-12"><TableSkeleton rows={5} cols={9} /></td></tr>
               ) : rows.length === 0 ? (
                 <tr><td colSpan={9} className="px-4 py-12 text-center text-gray-500">
                   데이터가 없습니다. 행을 추가하거나 클립보드에서 붙여넣기 하세요.
@@ -473,6 +497,16 @@ export function ChargesPage() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={deleteIndex !== null}
+        title="행 삭제"
+        message="이 차지 행을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+        confirmLabel="삭제"
+        danger
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteIndex(null)}
+      />
     </div>
   )
 }

@@ -4,6 +4,7 @@ import api from '@/lib/api'
 import { format } from 'date-fns'
 import { Upload, FileText, Trash2, Eye, Plus } from 'lucide-react'
 import { PdfViewer } from '@/components/PdfViewer'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 
 export function UploadsPage() {
   const queryClient = useQueryClient()
@@ -11,6 +12,7 @@ export function UploadsPage() {
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({})
   const [selectedScan, setSelectedScan] = useState<any>(null)
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
+  const [deleteId, setDeleteId] = useState<number | null>(null)
   const [showRecordForm, setShowRecordForm] = useState(false)
   const [recordForm, setRecordForm] = useState({
     chargeScanId: 0,
@@ -210,7 +212,7 @@ export function UploadsPage() {
                         <Eye className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => deleteMutation.mutate(scan.id)}
+                        onClick={() => setDeleteId(scan.id)}
                         className="text-red-600 hover:text-red-900"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -365,6 +367,16 @@ export function UploadsPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteId !== null}
+        title="PDF 삭제"
+        message="이 PDF 파일을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+        confirmLabel="삭제"
+        danger
+        onConfirm={() => { if (deleteId) { deleteMutation.mutate(deleteId); setDeleteId(null) } }}
+        onCancel={() => setDeleteId(null)}
+      />
     </div>
   )
 }
