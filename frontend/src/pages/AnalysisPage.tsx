@@ -4,6 +4,7 @@ import api from '@/lib/api'
 import { format, subDays } from 'date-fns'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar, ResponsiveContainer } from 'recharts'
 import { PdfViewer } from '@/components/PdfViewer'
+import { ChartSkeleton } from '@/components/Skeleton'
 import { BarChart3, Table, FileText } from 'lucide-react'
 
 type Tab = 'charts' | 'compare'
@@ -137,34 +138,38 @@ export function AnalysisPage() {
             <div className="bg-white shadow rounded-lg p-4">
               <h3 className="text-lg font-medium text-gray-900 mb-4">가스 사용량 추이</h3>
               <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={usageTrend || []}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} />
-                    <Tooltip />
-                    <Legend />
-                    <Line type="monotone" dataKey="usage" stroke="#3B82F6" name="사용량" />
-                  </LineChart>
-                </ResponsiveContainer>
+                {usageTrend ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={usageTrend}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip />
+                      <Legend />
+                      <Line type="monotone" dataKey="usage" stroke="#3B82F6" name="사용량" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : <ChartSkeleton />}
               </div>
             </div>
 
             <div className="bg-white shadow rounded-lg p-4">
               <h3 className="text-lg font-medium text-gray-900 mb-4">온도 추이</h3>
               <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={temperatureTrend || []}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="hour" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} />
-                    <Tooltip />
-                    <Legend />
-                    <Line type="monotone" dataKey="avgTemp" stroke="#EF4444" name="평균온도" />
-                    <Line type="monotone" dataKey="minTemp" stroke="#3B82F6" name="최저온도" />
-                    <Line type="monotone" dataKey="maxTemp" stroke="#F59E0B" name="최고온도" />
-                  </LineChart>
-                </ResponsiveContainer>
+                {temperatureTrend ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={temperatureTrend}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="hour" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip />
+                      <Legend />
+                      <Line type="monotone" dataKey="avgTemp" stroke="#EF4444" name="평균온도" />
+                      <Line type="monotone" dataKey="minTemp" stroke="#3B82F6" name="최저온도" />
+                      <Line type="monotone" dataKey="maxTemp" stroke="#F59E0B" name="최고온도" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : <ChartSkeleton />}
               </div>
             </div>
           </div>
