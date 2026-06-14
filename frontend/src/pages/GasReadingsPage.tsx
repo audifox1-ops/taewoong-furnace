@@ -5,8 +5,10 @@ import { format } from 'date-fns'
 import { Download, Filter } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { TableSkeleton } from '@/components/Skeleton'
+import { useToast } from '@/components/Toast'
 
 export function GasReadingsPage() {
+  const { toast } = useToast()
   const [furnaceId, setFurnaceId] = useState<number | ''>('')
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'))
@@ -56,7 +58,11 @@ export function GasReadingsPage() {
     const a = document.createElement('a')
     a.href = url
     a.download = `gas-readings-${format(new Date(), 'yyyyMMdd')}.csv`
+    document.body.appendChild(a)
     a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    toast('success', 'CSV 파일이 다운로드되었습니다')
   }
 
   return (

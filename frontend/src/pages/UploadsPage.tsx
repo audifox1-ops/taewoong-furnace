@@ -144,9 +144,13 @@ export function UploadsPage() {
         className={`border-2 border-dashed rounded-lg p-8 text-center mb-6 transition-colors ${
           uploadProgress.batch ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
         }`}
+        role="button"
+        tabIndex={0}
+        aria-label="PDF 파일 업로드 영역"
         onDragOver={handleDragOver}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click() } }}
       >
         <input
           ref={fileInputRef}

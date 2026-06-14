@@ -4,8 +4,10 @@ import api from '@/lib/api'
 import { format } from 'date-fns'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { Calendar, Download } from 'lucide-react'
+import { useToast } from '@/components/Toast'
 
 export function MonthlyReportPage() {
+  const { toast } = useToast()
   const [yearMonth, setYearMonth] = useState(format(new Date(), 'yyyy-MM'))
   const [furnaceId, setFurnaceId] = useState<number | ''>('')
 
@@ -62,7 +64,11 @@ export function MonthlyReportPage() {
     const a = document.createElement('a')
     a.href = url
     a.download = `monthly-report-${yearMonth}.csv`
+    document.body.appendChild(a)
     a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    toast('success', 'CSV 파일이 다운로드되었습니다')
   }
 
   return (

@@ -332,7 +332,11 @@ export function ChargesPage() {
     const a = document.createElement('a')
     a.href = url
     a.download = `charges-${format(new Date(), 'yyyyMMdd')}.csv`
+    document.body.appendChild(a)
     a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    toast('success', 'CSV 파일이 다운로드되었습니다')
   }
 
   const errorCount = rows.filter(r => r._errors?.length).length

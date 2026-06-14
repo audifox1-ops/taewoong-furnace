@@ -204,7 +204,8 @@ export class ChargeService {
       }
       prevEnd.setHours(shiftConfig.endHour, shiftConfig.endMinute, 0, 0);
 
-      if (prevEnd >= shiftStart && prevEnd <= shiftStart) {
+      const tolerance = 2 * 60 * 60 * 1000 // 2 hours
+      if (Math.abs(prevEnd.getTime() - shiftStart.getTime()) <= tolerance) {
         return prevEnd;
       }
     }

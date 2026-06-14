@@ -148,9 +148,13 @@ export function GasUploadPage() {
       {/* Drop Zone */}
       <div
         className="border-2 border-dashed rounded-lg p-8 text-center hover:border-blue-400 transition-colors cursor-pointer mb-6"
+        role="button"
+        tabIndex={0}
+        aria-label="파일 업로드 영역"
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
         onClick={() => fileInputRef.current?.click()}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click() } }}
       >
         <input ref={fileInputRef} type="file" multiple accept=".xlsx,.xls,.csv" className="hidden"
           onChange={handleFileInput} />

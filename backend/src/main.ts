@@ -1,10 +1,11 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Bootstrap');
   
   app.setGlobalPrefix('api');
   app.enableCors({
@@ -18,18 +19,20 @@ async function bootstrap() {
     transform: true,
   }));
 
-  const config = new DocumentBuilder()
-    .setTitle('TAEWOONG Furnace Management API')
-    .setDescription('Gas Reading & Charge Management System')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  if (process.env.NODE_ENV !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('TAEWOONG Furnace Management API')
+      .setDescription('Gas Reading & Charge Management System')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+    
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/docs', app, document);
+  }
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
-  console.log(`Application running on port ${port}`);
+  logger.log(`Application running on port ${port}`);
 }
 bootstrap();
