@@ -33,7 +33,7 @@ export function MonthlyReportPage() {
     queryFn: () => api.get(`/analysis/usage-by-furnace?startDate=${startDate}&endDate=${endDate}`).then(r => r.data),
   })
 
-  const charges = summary || []
+  const charges = Array.isArray(summary) ? summary : []
   const totalUsage = charges.reduce((sum: number, c: any) => sum + (c.usage || 0), 0)
   const dayUsage = charges.filter((c: any) => c.shift === 'day').reduce((s: number, c: any) => s + (c.usage || 0), 0)
   const nightUsage = charges.filter((c: any) => c.shift === 'night').reduce((s: number, c: any) => s + (c.usage || 0), 0)

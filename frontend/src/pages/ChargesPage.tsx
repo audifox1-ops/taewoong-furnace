@@ -82,7 +82,8 @@ export function ChargesPage() {
       if (startDate) params.append('startDate', startDate)
       if (endDate) params.append('endDate', endDate + 'T23:59:59')
       return api.get(`/charges?${params.toString()}`).then((res) => {
-        const data = res.data.map((c: any) => ({
+        const items = Array.isArray(res.data) ? res.data : []
+        const data = items.map((c: any) => ({
           id: c.id,
           chargeNo: c.chargeNo,
           furnaceNo: c.furnace?.no || '',

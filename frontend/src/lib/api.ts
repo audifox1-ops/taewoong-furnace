@@ -18,9 +18,8 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => {
     const d = response.data
-    if (d && typeof d === 'object' && !Array.isArray(d)) {
-      const keys = Object.keys(d)
-      if (keys.length === 1 && keys[0] === 'data' && Array.isArray(d.data)) {
+    if (d && typeof d === 'object' && !Array.isArray(d) && Array.isArray(d.data)) {
+      if (!('total' in d || 'totalPages' in d || 'page' in d || 'limit' in d)) {
         response.data = d.data
       }
     }

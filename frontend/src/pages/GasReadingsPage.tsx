@@ -27,7 +27,11 @@ export function GasReadingsPage() {
       if (endDate) params.append('endDate', endDate + 'T23:59:59')
       params.append('page', String(page))
       params.append('limit', String(limit))
-      return api.get(`/gas-readings?${params.toString()}`).then((res) => res.data)
+      return api.get(`/gas-readings?${params.toString()}`).then((res) => {
+        const d = res.data
+        if (Array.isArray(d)) return { data: d, total: d.length, page, limit, totalPages: Math.ceil(d.length / limit) }
+        return d
+      })
     },
   })
 
