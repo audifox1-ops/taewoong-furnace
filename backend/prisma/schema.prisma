@@ -62,6 +62,11 @@ model ChargeEntry {
   note            String?
 
   gasUsage        GasUsage?
+
+  @@index([furnaceId])
+  @@index([workDate])
+  @@index([furnaceId, workDate])
+  @@index([chargeRecordId])
 }
 
 model ChargeScan {
@@ -73,6 +78,8 @@ model ChargeScan {
   status           String        @default("uploaded") // "uploaded", "processed", "error"
 
   chargeRecords    ChargeRecord[]
+
+  @@index([uploadedAt])
 }
 
 model ChargeRecord {
@@ -91,6 +98,10 @@ model ChargeRecord {
   note         String?
 
   chargeEntries ChargeEntry[]
+
+  @@index([chargeScanId])
+  @@index([furnaceId])
+  @@index([workDate])
 }
 
 model GasUsage {
@@ -125,4 +136,6 @@ model ImportBatch {
   createdAt    DateTime      @default(now())
 
   gasReadings  GasReading[]
+
+  @@index([createdAt])
 }

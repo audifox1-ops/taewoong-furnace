@@ -89,11 +89,11 @@ export class GasReadingService {
 
     const twoMinutes = 2 * 60 * 1000;
     const before = await this.prisma.gasReading.findFirst({
-      where: { furnaceId, ts: { gte: new Date(targetTime.getTime() - twoMinutes) } },
+      where: { furnaceId, ts: { gte: new Date(targetTime.getTime() - twoMinutes), lt: targetTime } },
       orderBy: { ts: 'desc' },
     });
     const after = await this.prisma.gasReading.findFirst({
-      where: { furnaceId, ts: { lte: new Date(targetTime.getTime() + twoMinutes) } },
+      where: { furnaceId, ts: { gt: targetTime, lte: new Date(targetTime.getTime() + twoMinutes) } },
       orderBy: { ts: 'asc' },
     });
 

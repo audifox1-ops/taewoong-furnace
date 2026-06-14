@@ -5,9 +5,11 @@ import { format } from 'date-fns'
 import { Upload, FileText, Trash2, Eye, Plus } from 'lucide-react'
 import { PdfViewer } from '@/components/PdfViewer'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { useToast } from '@/components/Toast'
 
 export function UploadsPage() {
   const queryClient = useQueryClient()
+  const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({})
   const [selectedScan, setSelectedScan] = useState<any>(null)
@@ -65,6 +67,10 @@ export function UploadsPage() {
       queryClient.invalidateQueries({ queryKey: ['charge-scans'] })
       setUploadProgress({})
     },
+    onError: () => {
+      setUploadProgress({})
+      toast('error', 'PDF 업로드 중 오류가 발생했습니다')
+    },
   })
 
   const createRecordMutation = useMutation({
@@ -75,6 +81,7 @@ export function UploadsPage() {
       queryClient.invalidateQueries({ queryKey: ['charge-records'] })
       setShowRecordForm(false)
     },
+    onError: () => toast('error', '기록 생성 중 오류가 발생했습니다'),
   })
 
   const deleteMutation = useMutation({
@@ -84,6 +91,7 @@ export function UploadsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['charge-scans'] })
     },
+    onError: () => toast('error', '삭제 중 오류가 발생했습니다'),
   })
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

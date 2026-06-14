@@ -343,7 +343,7 @@ export class ChargeService {
       return existingCharge;
     }
 
-    const chargeNo = this.generateChargeNo(record.workDate, record.furnaceId);
+    const chargeNo = await this.generateChargeNo(record.workDate, record.furnaceId);
     return this.create({
       chargeNo,
       furnaceId: record.furnaceId,
@@ -405,11 +405,23 @@ export class ChargeService {
     return updated;
   }
 
-  private generateChargeNo(workDate: Date, furnaceId: number): string {
+  private async generateChargeNo(workDate: Date, furnaceId: number): Promise<string> {
     const yy = String(workDate.getFullYear()).slice(-2);
     const mm = String(workDate.getMonth() + 1).padStart(2, '0');
     const dd = String(workDate.getDate()).padStart(2, '0');
-    const seq = String(1).padStart(3, '0');
-    return `${yy}${mm}${dd}-${seq}`;
+    const datePrefix = `${yy}${mm}${dd}`;
+
+    const lastEntry = await this.prisma.chargeEntry.findFirst({
+      where: { chargeNo: { startsWith: datePrefix } },
+      orderBy: { chargeNo: 'desc' },
+    });
+
+    let seq = 1;
+    if (lastEntry) {
+      const lastSeq = parseInt(lastEntry.chargeNo.split('-')[1], 10);
+      if (!isNaN(lastSeq)) seq = lastSeq + 1;
+    }
+
+    return `${datePrefix}-${String(seq).padStart(3, '0')}`;
   }
 }

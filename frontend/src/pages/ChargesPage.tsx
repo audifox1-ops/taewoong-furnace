@@ -6,6 +6,7 @@ import { format } from 'date-fns'
 import { Save, Trash2, Plus, Clipboard, AlertTriangle, Wand2, ExternalLink } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { TableSkeleton } from '@/components/Skeleton'
+import { useToast } from '@/components/Toast'
 
 interface ChargeRow {
   id?: number
@@ -32,6 +33,7 @@ function generateChargeNo(date: Date, sequence: number): string {
 
 export function ChargesPage() {
   const queryClient = useQueryClient()
+  const { toast } = useToast()
   const [rows, setRows] = useState<ChargeRow[]>([])
   const [furnaceId, setFurnaceId] = useState<number | ''>('')
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'))
@@ -40,21 +42,6 @@ export function ChargesPage() {
   const [autoFilling, setAutoFilling] = useState<number | null>(null)
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault()
-        if (hasUnsavedChanges) saveAll()
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault()
-        addRow()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [hasUnsavedChanges])
 
   const validateRow = (row: ChargeRow): string[] => {
     const errors: string[] = []
@@ -108,16 +95,19 @@ export function ChargesPage() {
       queryClient.invalidateQueries({ queryKey: ['charges'] })
       setHasUnsavedChanges(false)
     },
+    onError: () => toast('error', '저장 중 오류가 발생했습니다'),
   })
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => api.post('/charges', data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['charges'] }),
+    onError: () => toast('error', '차지 생성 중 오류가 발생했습니다'),
   })
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => api.delete(`/charges/${id}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['charges'] }),
+    onError: () => toast('error', '삭제 중 오류가 발생했습니다'),
   })
 
   const pasteMutation = useMutation({
@@ -127,11 +117,13 @@ export function ChargesPage() {
       setHasUnsavedChanges(false)
       return res.data
     },
+    onError: () => toast('error', '붙여넣기 중 오류가 발생했습니다'),
   })
 
   const autoFillMutation = useMutation({
     mutationFn: async (data: { furnaceId: number; workDate: string; shift: string }) =>
       api.post('/charges/auto-fill', data).then(r => r.data),
+    onError: () => toast('error', '자동채움 중 오류가 발생했습니다'),
   })
 
   const handleCellChange = useCallback((index: number, field: keyof ChargeRow, value: any) => {
@@ -239,7 +231,7 @@ export function ChargesPage() {
     setDeleteIndex(null)
   }
 
-  const saveAll = () => {
+  const saveAll = async () => {
     const existing = rows.filter(r => r.id).map(r => ({
       id: r.id,
       gasBefore: r.gasBefore === '' ? null : r.gasBefore,
@@ -257,10 +249,36 @@ export function ChargesPage() {
       note: r.note,
     }))
 
-    if (existing.length > 0) saveMutation.mutate({ updates: existing })
-    newOnes.forEach(r => createMutation.mutate(r))
-    setHasUnsavedChanges(false)
+    try {
+      if (existing.length > 0) await saveMutation.mutateAsync({ updates: existing })
+      for (const r of newOnes) {
+        await createMutation.mutateAsync(r)
+      }
+      setHasUnsavedChanges(false)
+    } catch (err) {
+      toast('error', '저장 중 오류가 발생했습니다')
+    }
   }
+
+  const saveAllRef = useRef(saveAll)
+  saveAllRef.current = saveAll
+  const addRowRef = useRef(addRow)
+  addRowRef.current = addRow
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault()
+        if (hasUnsavedChanges) saveAllRef.current()
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault()
+        addRowRef.current()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [hasUnsavedChanges])
 
   const handleAutoFill = async (index: number) => {
     const row = rows[index]
