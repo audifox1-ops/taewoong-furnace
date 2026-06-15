@@ -54,6 +54,7 @@ async function main() {
   if (furnace1) {
     const startDate = new Date('2026-05-01T00:00:00');
     let cumulative = 1000;
+    const readings = [];
 
     for (let i = 0; i < 1440; i++) { // 1 day, 1 minute intervals
       const ts = new Date(startDate.getTime() + i * 60 * 1000);
@@ -61,18 +62,18 @@ async function main() {
       const gas = Math.random() > 0.3 ? Math.random() * 5 : 0;
       cumulative += gas;
 
-      await prisma.gasReading.create({
-        data: {
-          furnaceId: furnace1.id,
-          ts,
-          temp,
-          gas,
-          gasCumulative: cumulative,
-          temp2: temp + Math.random() * 5,
-          temp3: temp - Math.random() * 5,
-        },
+      readings.push({
+        furnaceId: furnace1.id,
+        ts,
+        temp,
+        gas,
+        gasCumulative: cumulative,
+        temp2: temp + Math.random() * 5,
+        temp3: temp - Math.random() * 5,
       });
     }
+    
+    await prisma.gasReading.createMany({ data: readings, skipDuplicates: true });
   }
 
   console.log('Sample gas readings seeded');

@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "TAEWOONG Furnace Gas Reading & Charge Management Backend",
   "main": "dist/main.js",
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
   "scripts": {
     "build": "nest build",
     "start": "nest start",
