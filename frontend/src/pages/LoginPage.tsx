@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { Factory, LogIn, AlertCircle } from 'lucide-react'
+import api from '@/lib/api'
+import { Factory, LogIn, UserPlus, AlertCircle } from 'lucide-react'
 
 export function LoginPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [isRegister, setIsRegister] = useState(false)
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { login } = useAuth()
@@ -17,10 +19,15 @@ export function LoginPage() {
     setIsSubmitting(true)
 
     try {
-      await login(username, password)
+      if (isRegister) {
+        await api.post('/auth/register', { username, password, role: 'user' })
+        await login(username, password)
+      } else {
+        await login(username, password)
+      }
       navigate('/')
     } catch (err: any) {
-      setError(err.response?.data?.message || '로그인에 실패했습니다')
+      setError(err.response?.data?.message || (isRegister ? '회원가입에 실패했습니다' : '로그인에 실패했습니다'))
     } finally {
       setIsSubmitting(false)
     }
@@ -82,7 +89,7 @@ export function LoginPage() {
                   id="password"
                   name="password"
                   type="password"
-                  autoComplete="current-password"
+                  autoComplete={isRegister ? 'new-password' : 'current-password'}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -104,14 +111,24 @@ export function LoginPage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    로그인 중...
+                    {isRegister ? '회원가입 중...' : '로그인 중...'}
                   </span>
                 ) : (
                   <span className="flex items-center">
-                    <LogIn className="h-4 w-4 mr-2" />
-                    로그인
+                    {isRegister ? <UserPlus className="h-4 w-4 mr-2" /> : <LogIn className="h-4 w-4 mr-2" />}
+                    {isRegister ? '회원가입' : '로그인'}
                   </span>
                 )}
+              </button>
+            </div>
+
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => { setIsRegister(!isRegister); setError('') }}
+                className="text-sm text-blue-600 hover:text-blue-500"
+              >
+                {isRegister ? '이미 계정이 있으신가요? 로그인' : '계정이 없으신가요? 회원가입'}
               </button>
             </div>
           </form>

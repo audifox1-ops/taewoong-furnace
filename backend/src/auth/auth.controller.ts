@@ -13,10 +13,8 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post('register')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Register new user (admin only)' })
+  @Throttle({ short: { ttl: 1000, limit: 3 } })
+  @ApiOperation({ summary: 'Register new user' })
   async register(@Body() body: RegisterDto) {
     return this.authService.register(body.username, body.password, body.role);
   }
