@@ -1,20 +1,27 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+  schemas   = ["taewoong_furnace"]
 }
 
 enum UserRole {
   admin
   user
+
+  @@schema("taewoong_furnace")
 }
 
 enum Shift {
   day
   night
+
+  @@schema("taewoong_furnace")
 }
 
 enum ChargeSource {
@@ -22,12 +29,16 @@ enum ChargeSource {
   manual
   paste
   upload
+
+  @@schema("taewoong_furnace")
 }
 
 enum ChargeScanStatus {
   uploaded
   processed
   error
+
+  @@schema("taewoong_furnace")
 }
 
 model User {
@@ -36,6 +47,8 @@ model User {
   passwordHash String
   role         UserRole @default(user)
   createdAt    DateTime @default(now())
+
+  @@schema("taewoong_furnace")
 }
 
 model Furnace {
@@ -47,6 +60,8 @@ model Furnace {
   chargeEntries  ChargeEntry[]
   chargeRecords  ChargeRecord[]
   importBatches  ImportBatch[]
+
+  @@schema("taewoong_furnace")
 }
 
 model GasReading {
@@ -66,6 +81,7 @@ model GasReading {
 
   @@unique([furnaceId, ts])
   @@index([furnaceId, ts])
+  @@schema("taewoong_furnace")
 }
 
 model ChargeEntry {
@@ -87,19 +103,21 @@ model ChargeEntry {
   @@index([workDate])
   @@index([furnaceId, workDate])
   @@index([chargeRecordId])
+  @@schema("taewoong_furnace")
 }
 
 model ChargeScan {
-  id               Int             @id @default(autoincrement())
+  id               Int              @id @default(autoincrement())
   fileUrl          String
   originalFileName String
-  uploadedAt       DateTime        @default(now())
+  uploadedAt       DateTime         @default(now())
   pageCount        Int?
   status           ChargeScanStatus @default(uploaded)
 
   chargeRecords    ChargeRecord[]
 
   @@index([uploadedAt])
+  @@schema("taewoong_furnace")
 }
 
 model ChargeRecord {
@@ -122,6 +140,7 @@ model ChargeRecord {
   @@index([chargeScanId])
   @@index([furnaceId])
   @@index([workDate])
+  @@schema("taewoong_furnace")
 }
 
 model ImportBatch {
@@ -139,4 +158,5 @@ model ImportBatch {
   gasReadings  GasReading[]
 
   @@index([createdAt])
+  @@schema("taewoong_furnace")
 }
