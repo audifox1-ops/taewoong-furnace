@@ -11,36 +11,35 @@ model User {
   id           Int      @id @default(autoincrement())
   username     String   @unique
   passwordHash String
-  role         String   @default("user") // "admin" or "user"
+  role         String   @default("user") // "admin" | "user"
   createdAt    DateTime @default(now())
 }
 
 model Furnace {
   id   Int    @id @default(autoincrement())
-  no   Int    @unique // 1-20, excluding 7
-  name String // e.g., "가열19호"
+  no   Int    @unique
+  name String
 
   gasReadings    GasReading[]
   chargeEntries  ChargeEntry[]
   chargeRecords  ChargeRecord[]
-  gasUsages      GasUsage[]
   importBatches  ImportBatch[]
 }
 
 model GasReading {
   id               Int      @id @default(autoincrement())
   furnaceId        Int
-  furnace          Furnace  @relation(fields: [furnaceId], references: [id])
-  ts               DateTime // timestamp (minute precision)
+  furnace          Furnace  @relation(fields: [furnaceId], references: [id], onDelete: Cascade)
+  ts               DateTime
   temp             Float?
   gas              Float?
-  gasCumulative    Float    // 가스누적지침
+  gasCumulative    Float
   power            Float?
   powerCumulative  Float?
   temp2            Float?
   temp3            Float?
   importBatchId    Int?
-  importBatch      ImportBatch? @relation(fields: [importBatchId], references: [id])
+  importBatch      ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
 
   @@unique([furnaceId, ts])
   @@index([furnaceId, ts])
@@ -48,20 +47,18 @@ model GasReading {
 
 model ChargeEntry {
   id              Int          @id @default(autoincrement())
-  chargeNo        String       // e.g., "260610-006"
+  chargeNo        String
   furnaceId       Int
-  furnace         Furnace      @relation(fields: [furnaceId], references: [id])
-  gasBefore       Float?       // 사용전 가스누적지침
-  gasAfter        Float?       // 사용후 가스누적지침
-  usage           Float?       // 계산값 (gasAfter - gasBefore)
-  workDate        DateTime     // 작업일
-  shift           String       // "day" or "night"
-  source          String       @default("manual") // "auto", "manual", "paste"
-  chargeRecordId  Int?         // 장입도 연결
-  chargeRecord    ChargeRecord? @relation(fields: [chargeRecordId], references: [id])
+  furnace         Furnace      @relation(fields: [furnaceId], references: [id], onDelete: Cascade)
+  gasBefore       Float?
+  gasAfter        Float?
+  usage           Float?
+  workDate        DateTime
+  shift           String       // "day" | "night"
+  source          String       @default("manual") // "auto" | "manual" | "paste" | "upload"
+  chargeRecordId  Int?
+  chargeRecord    ChargeRecord? @relation(fields: [chargeRecordId], references: [id], onDelete: SetNull)
   note            String?
-
-  gasUsage        GasUsage?
 
   @@index([furnaceId])
   @@index([workDate])
@@ -75,7 +72,7 @@ model ChargeScan {
   originalFileName String
   uploadedAt       DateTime      @default(now())
   pageCount        Int?
-  status           String        @default("uploaded") // "uploaded", "processed", "error"
+  status           String        @default("uploaded") // "uploaded" | "processed" | "error"
 
   chargeRecords    ChargeRecord[]
 
@@ -85,16 +82,16 @@ model ChargeScan {
 model ChargeRecord {
   id           Int         @id @default(autoincrement())
   chargeScanId Int
-  chargeScan   ChargeScan  @relation(fields: [chargeScanId], references: [id])
-  pageIndex    Int         // page number in PDF
+  chargeScan   ChargeScan  @relation(fields: [chargeScanId], references: [id], onDelete: Cascade)
+  pageIndex    Int
   furnaceId    Int
-  furnace      Furnace     @relation(fields: [furnaceId], references: [id])
-  workDate     DateTime    // 작업일
-  shift        String      // "day" or "night"
-  workEnd      DateTime    // 수기 작업 종료 시각
-  workStart    DateTime?   // 추정 시작 시각
-  material     String?     // 재질/품번
-  weightKg     Float?      // 중량
+  furnace      Furnace     @relation(fields: [furnaceId], references: [id], onDelete: Cascade)
+  workDate     DateTime
+  shift        String       // "day" | "night"
+  workEnd      DateTime
+  workStart    DateTime?
+  material     String?
+  weightKg     Float?
   note         String?
 
   chargeEntries ChargeEntry[]
@@ -104,30 +101,11 @@ model ChargeRecord {
   @@index([workDate])
 }
 
-model GasUsage {
-  id           Int         @id @default(autoincrement())
-  furnaceId    Int
-  furnace      Furnace     @relation(fields: [furnaceId], references: [id])
-  workDate     DateTime
-  shift        String      // "day" or "night"
-  periodStart  DateTime
-  periodEnd    DateTime
-  cumStart     Float       // 시작 시점 가스누적지침
-  cumEnd       Float       // 종료 시점 가스누적지침
-  usage        Float       // 사용량
-  weightKg     Float?      // 장입 중량
-  unitRate     Float?      // 원단위 (usage/weightKg)
-  chargeEntryId Int?       @unique // ChargeEntry 연결
-  chargeEntry  ChargeEntry? @relation(fields: [chargeEntryId], references: [id])
-
-  @@unique([furnaceId, workDate, shift])
-}
-
 model ImportBatch {
   id           Int           @id @default(autoincrement())
   fileName     String
   furnaceId    Int?
-  furnace      Furnace?      @relation(fields: [furnaceId], references: [id])
+  furnace      Furnace?      @relation(fields: [furnaceId], references: [id], onDelete: SetNull)
   periodStart  DateTime?
   periodEnd    DateTime?
   rowCount     Int           @default(0)

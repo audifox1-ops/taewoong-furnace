@@ -12,6 +12,8 @@ export class GasReadingController {
   constructor(private gasReadingService: GasReadingService) {}
 
   @Get()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get gas readings with pagination' })
   async findAll(
     @Query('furnaceId') furnaceId?: string,
@@ -29,6 +31,8 @@ export class GasReadingController {
   }
 
   @Get('furnace/:furnaceId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get gas readings for specific furnace' })
   async findByFurnace(
     @Param('furnaceId') furnaceId: string,
@@ -41,6 +45,8 @@ export class GasReadingController {
   }
 
   @Get('parse-filename')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Parse furnace/date from filename' })
   parseFilename(@Query('name') name: string) {
     return this.gasReadingService.parseFileName(name);
@@ -61,7 +67,7 @@ export class GasReadingController {
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Upload single Excel/CSV (admin only)' })
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
   async upload(
     @UploadedFile() file: Express.Multer.File,
     @Body('furnaceId') furnaceId?: string,
@@ -80,7 +86,7 @@ export class GasReadingController {
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Upload multiple Excel/CSV files (admin only)' })
-  @UseInterceptors(FilesInterceptor('files', 50))
+  @UseInterceptors(FilesInterceptor('files', 50, { limits: { fileSize: 10 * 1024 * 1024 } }))
   async uploadBatch(
     @UploadedFiles() files: Express.Multer.File[],
     @Body('duplicateMode') duplicateMode?: string,

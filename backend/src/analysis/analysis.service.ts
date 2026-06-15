@@ -158,18 +158,18 @@ export class AnalysisService {
         workDate: { gte: startDate, lte: endDate },
         usage: { not: null },
       },
-      include: { gasUsage: true },
+      include: { chargeRecord: true },
     });
 
     return charges
-      .filter(c => c.gasUsage?.weightKg != null && c.usage != null)
+      .filter(c => c.chargeRecord?.weightKg != null && c.usage != null)
       .map(c => ({
         chargeNo: c.chargeNo,
         workDate: c.workDate,
         shift: c.shift,
         usage: c.usage!,
-        weightKg: c.gasUsage!.weightKg!,
-        unitRate: c.usage! / c.gasUsage!.weightKg!,
+        weightKg: c.chargeRecord!.weightKg!,
+        unitRate: c.usage! / c.chargeRecord!.weightKg!,
       }));
   }
 }

@@ -10,7 +10,11 @@ export class ChargeService {
   ) {}
 
   async findAll(furnaceId?: number, startDate?: string, endDate?: string, shift?: string) {
-    const where: any = {};
+    const where: {
+      furnaceId?: number;
+      shift?: string;
+      workDate?: { gte?: Date; lte?: Date };
+    } = {};
 
     if (furnaceId) where.furnaceId = furnaceId;
     if (shift) where.shift = shift;
@@ -22,7 +26,7 @@ export class ChargeService {
 
     return this.prisma.chargeEntry.findMany({
       where,
-      include: { furnace: true, chargeRecord: true, gasUsage: true },
+      include: { furnace: true, chargeRecord: true },
       orderBy: [{ workDate: 'desc' }, { chargeNo: 'desc' }],
     });
   }
@@ -30,7 +34,7 @@ export class ChargeService {
   async findOne(id: number) {
     const charge = await this.prisma.chargeEntry.findUnique({
       where: { id },
-      include: { furnace: true, chargeRecord: { include: { chargeScan: true } }, gasUsage: true },
+      include: { furnace: true, chargeRecord: { include: { chargeScan: true } } },
     });
     if (!charge) throw new NotFoundException('Charge not found');
     return charge;
@@ -92,11 +96,23 @@ export class ChargeService {
   }
 
   async bulkUpdate(updates: { id: number; gasBefore?: number; gasAfter?: number; note?: string }[]) {
-    const results = [];
-    for (const update of updates) {
-      results.push(await this.update(update.id, update));
-    }
-    return results;
+    return this.prisma.$transaction(
+      updates.map((update) =>
+        this.prisma.chargeEntry.update({
+          where: { id: update.id },
+          data: {
+            ...(update.gasBefore !== undefined && { gasBefore: update.gasBefore }),
+            ...(update.gasAfter !== undefined && { gasAfter: update.gasAfter }),
+            ...(update.note !== undefined && { note: update.note }),
+            usage: update.gasAfter != null && update.gasBefore != null
+              ? update.gasAfter - update.gasBefore
+              : undefined,
+            source: 'manual',
+          },
+          include: { furnace: true },
+        })
+      )
+    );
   }
 
   async pasteData(rows: {
@@ -183,7 +199,13 @@ export class ChargeService {
     furnaceId: number,
     workDate: Date,
     shift: string,
-    shiftConfig: any,
+    shiftConfig: {
+      startHour: number;
+      startMinute: number;
+      endHour: number;
+      endMinute: number;
+      crossesMidnight: boolean;
+    },
   ): Promise<Date> {
     const shiftStart = new Date(workDate);
     shiftStart.setHours(shiftConfig.startHour, shiftConfig.startMinute, 0, 0);
@@ -254,7 +276,10 @@ export class ChargeService {
   }
 
   async getUsageSummary(furnaceId?: number, startDate?: string, endDate?: string) {
-    const where: any = {};
+    const where: {
+      furnaceId?: number;
+      workDate?: { gte?: Date; lte?: Date };
+    } = {};
     if (furnaceId) where.furnaceId = furnaceId;
     if (startDate || endDate) {
       where.workDate = {};
@@ -264,7 +289,7 @@ export class ChargeService {
 
     const charges = await this.prisma.chargeEntry.findMany({
       where,
-      include: { furnace: true, gasUsage: true },
+      include: { furnace: true },
     });
 
     const summary = charges.reduce((acc, charge) => {
@@ -283,7 +308,13 @@ export class ChargeService {
       }
       acc[key].chargeCount++;
       return acc;
-    }, {} as any);
+    }, {} as Record<string, {
+      furnaceId: number;
+      furnaceName: string;
+      shift: string;
+      totalUsage: number;
+      chargeCount: number;
+    }>);
 
     return Object.values(summary);
   }
@@ -309,7 +340,13 @@ export class ChargeService {
   }
 
   private getShiftConfig(shift: string) {
-    const configs: Record<string, any> = {
+    const configs: Record<string, {
+      startHour: number;
+      startMinute: number;
+      endHour: number;
+      endMinute: number;
+      crossesMidnight: boolean;
+    }> = {
       day: { startHour: 8, startMinute: 0, endHour: 19, endMinute: 30, crossesMidnight: false },
       night: { startHour: 20, startMinute: 0, endHour: 7, endMinute: 0, crossesMidnight: true },
     };
@@ -363,15 +400,25 @@ export class ChargeService {
       orderBy: [{ workDate: 'asc' }, { pageIndex: 'asc' }],
     });
 
-    const results = [];
-    for (const record of records) {
-      try {
-        const charge = await this.rematchChargeRecord(record.id);
-        results.push({ recordId: record.id, chargeId: charge.id, status: 'matched' });
-      } catch (err: any) {
-        results.push({ recordId: record.id, status: 'failed', error: err.message });
-      }
+    const batchSize = 50;
+    const results: { recordId: number; chargeId?: number; status: string; error?: string }[] = [];
+    
+    for (let i = 0; i < records.length; i += batchSize) {
+      const batch = records.slice(i, i + batchSize);
+      const batchResults = await Promise.allSettled(
+        batch.map((record) => this.rematchChargeRecord(record.id))
+      );
+      
+      batchResults.forEach((result, index) => {
+        const record = batch[index];
+        if (result.status === 'fulfilled') {
+          results.push({ recordId: record.id, chargeId: result.value.id, status: 'matched' });
+        } else {
+          results.push({ recordId: record.id, status: 'failed', error: result.reason?.message || 'Unknown error' });
+        }
+      });
     }
+    
     return results;
   }
 

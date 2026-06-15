@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { ErrorBoundary } from './ErrorBoundary'
+import { useAuth } from '@/contexts/AuthContext'
 import { 
   LayoutDashboard, 
   FileText, 
@@ -13,7 +14,9 @@ import {
   Link2,
   Factory,
   Menu,
-  X
+  X,
+  LogOut,
+  User
 } from 'lucide-react'
 
 const navigation = [
@@ -32,6 +35,7 @@ export function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { user, logout } = useAuth()
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -81,14 +85,33 @@ export function Layout() {
                 })}
               </div>
             </div>
-            <div className="flex items-center md:hidden">
-              <button
-                onClick={() => setMobileOpen(!mobileOpen)}
-                className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
-                aria-label="Toggle navigation"
-              >
-                {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-              </button>
+            <div className="flex items-center">
+              {user && (
+                <div className="hidden md:flex items-center mr-4">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <User className="h-4 w-4 mr-1" />
+                    <span>{user.username}</span>
+                    {user.role === 'admin' && (
+                      <span className="ml-1 px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">관리자</span>
+                    )}
+                  </div>
+                  <button
+                    onClick={logout}
+                    className="ml-3 inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+              <div className="md:hidden">
+                <button
+                  onClick={() => setMobileOpen(!mobileOpen)}
+                  className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+                  aria-label="Toggle navigation"
+                >
+                  {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -114,6 +137,15 @@ export function Layout() {
                   </Link>
                 )
               })}
+              {user && (
+                <button
+                  onClick={() => { setMobileOpen(false); logout() }}
+                  className="flex items-center w-full px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                >
+                  <LogOut className="mr-3 h-5 w-5" />
+                  로그아웃
+                </button>
+              )}
             </div>
           </div>
         )}

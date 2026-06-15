@@ -17,7 +17,7 @@ export class UploadController {
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Upload PDF scan (admin only)' })
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 50 * 1024 * 1024 } }))
   async uploadPdf(@UploadedFile() file: Express.Multer.File) {
     return this.uploadService.uploadPdf(file);
   }
@@ -28,7 +28,7 @@ export class UploadController {
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Upload multiple PDF scans (admin only)' })
-  @UseInterceptors(FilesInterceptor('files', 100))
+  @UseInterceptors(FilesInterceptor('files', 100, { limits: { fileSize: 50 * 1024 * 1024 } }))
   async uploadMultiplePdfs(@UploadedFiles() files: Express.Multer.File[]) {
     const results = [];
     for (const file of files) {
@@ -43,12 +43,16 @@ export class UploadController {
   }
 
   @Get('pdf/:id/url')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get PDF presigned URL' })
   async getPdfUrl(@Param('id') id: string) {
     return this.uploadService.getPdfUrl(parseInt(id));
   }
 
   @Get('pdf')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'List all PDF scans' })
   async listScans() {
     return this.uploadService.listScans();
@@ -79,6 +83,8 @@ export class UploadController {
   }
 
   @Get('charge-records')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get charge records' })
   async getChargeRecords(@Query('chargeScanId') chargeScanId?: string) {
     return this.uploadService.getChargeRecords(chargeScanId ? parseInt(chargeScanId) : undefined);

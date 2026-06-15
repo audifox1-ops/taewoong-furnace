@@ -4,6 +4,7 @@ import { ChargeService } from './charge.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { CreateChargeDto, UpdateChargeDto, PasteDataDto, AutoFillDto, BulkUpdateDto } from './dto/charge.dto';
 
 @ApiTags('charges')
 @Controller('charges')
@@ -11,6 +12,8 @@ export class ChargeController {
   constructor(private chargeService: ChargeService) {}
 
   @Get()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all charges with filters' })
   async findAll(
     @Query('furnaceId') furnaceId?: string,
@@ -27,6 +30,8 @@ export class ChargeController {
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get charge by ID' })
   async findOne(@Param('id') id: string) {
     return this.chargeService.findOne(parseInt(id));
@@ -36,17 +41,7 @@ export class ChargeController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create charge entry' })
-  async create(@Body() body: {
-    chargeNo: string;
-    furnaceId: number;
-    gasBefore?: number;
-    gasAfter?: number;
-    workDate: string;
-    shift: string;
-    source?: string;
-    chargeRecordId?: number;
-    note?: string;
-  }) {
+  async create(@Body() body: CreateChargeDto) {
     return this.chargeService.create({
       ...body,
       workDate: new Date(body.workDate),
@@ -59,7 +54,7 @@ export class ChargeController {
   @ApiOperation({ summary: 'Update charge entry' })
   async update(
     @Param('id') id: string,
-    @Body() body: { gasBefore?: number; gasAfter?: number; note?: string; chargeRecordId?: number },
+    @Body() body: UpdateChargeDto,
   ) {
     return this.chargeService.update(parseInt(id), body);
   }
@@ -68,7 +63,7 @@ export class ChargeController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Bulk update charge entries' })
-  async bulkUpdate(@Body() body: { updates: { id: number; gasBefore?: number; gasAfter?: number; note?: string }[] }) {
+  async bulkUpdate(@Body() body: BulkUpdateDto) {
     return this.chargeService.bulkUpdate(body.updates);
   }
 
@@ -76,15 +71,7 @@ export class ChargeController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Paste data from clipboard (TSV)' })
-  async pasteData(@Body() body: {
-    rows: {
-      chargeNo: string;
-      furnaceNo: number;
-      gasBefore?: number;
-      gasAfter?: number;
-      note?: string;
-    }[];
-  }) {
+  async pasteData(@Body() body: PasteDataDto) {
     return this.chargeService.pasteData(body.rows);
   }
 
@@ -92,7 +79,7 @@ export class ChargeController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Auto-fill usage from gas readings' })
-  async autoFillUsage(@Body() body: { furnaceId: number; workDate: string; shift: string; workEnd?: string }) {
+  async autoFillUsage(@Body() body: AutoFillDto) {
     return this.chargeService.autoFillUsage(
       body.furnaceId,
       new Date(body.workDate),
@@ -121,6 +108,8 @@ export class ChargeController {
   }
 
   @Get('summary/usage')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get usage summary' })
   async getUsageSummary(
     @Query('furnaceId') furnaceId?: string,

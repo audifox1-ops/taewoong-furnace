@@ -19,6 +19,14 @@ async function bootstrap() {
     transform: true,
   }));
 
+  app.getHttpAdapter().get('/health', (req, res) => {
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    });
+  });
+
   if (process.env.NODE_ENV !== 'production') {
     const config = new DocumentBuilder()
       .setTitle('TAEWOONG Furnace Management API')
