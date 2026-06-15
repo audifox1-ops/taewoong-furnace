@@ -15,7 +15,6 @@ import {
   Factory,
   Menu,
   X,
-  LogOut,
   User
 } from 'lucide-react'
 
@@ -102,6 +101,7 @@ export function Layout() {
                       <span className="ml-1 px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">관리자</span>
                     )}
                   </div>
+                </div>
               )}
               <div className="md:hidden">
                 <button
@@ -176,8 +176,6 @@ export function Layout() {
                   </Link>
                 )
               })}
-              
-              </div>
             </div>
           </div>
         </div>
