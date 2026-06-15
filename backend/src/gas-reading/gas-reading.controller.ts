@@ -48,6 +48,14 @@ export class GasReadingController {
     return this.gasReadingService.getUploadHistory();
   }
 
+  @Get('furnace-fix-candidates')
+  @ApiOperation({ summary: 'List gas-reading batches that look misassigned' })
+  async listFurnaceFixCandidates(@Query('currentFurnaceNo') currentFurnaceNo?: string) {
+    return this.gasReadingService.listFurnaceFixCandidates(
+      currentFurnaceNo ? parseInt(currentFurnaceNo) : 1,
+    );
+  }
+
   @Post('upload')  @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Upload single Excel/CSV (admin only)' })
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
@@ -68,12 +76,29 @@ export class GasReadingController {
   @UseInterceptors(FilesInterceptor('files', 50, { limits: { fileSize: 10 * 1024 * 1024 } }))
   async uploadBatch(
     @UploadedFiles() files: Express.Multer.File[],
+    @Body('furnaceId') furnaceId?: string,
     @Body('duplicateMode') duplicateMode?: string,
   ) {
     return this.gasReadingService.uploadBatch(
       files,
-      undefined,
+      furnaceId ? [parseInt(furnaceId)] : undefined,
       (duplicateMode as 'skip' | 'upsert') || 'skip',
     );
+  }
+
+  @Post('fix-furnace-batch')
+  @ApiOperation({ summary: 'Fix a single misassigned gas-reading batch' })
+  async fixFurnaceBatch(
+    @Body() body: { batchId: number; currentFurnaceNo?: number },
+  ) {
+    return this.gasReadingService.applyFurnaceFix(body.batchId, body.currentFurnaceNo ?? 1);
+  }
+
+  @Post('fix-furnace-batches')
+  @ApiOperation({ summary: 'Fix multiple misassigned gas-reading batches' })
+  async fixFurnaceBatches(
+    @Body() body: { batchIds: number[]; currentFurnaceNo?: number },
+  ) {
+    return this.gasReadingService.applyFurnaceFixes(body.batchIds, body.currentFurnaceNo ?? 1);
   }
 }

@@ -236,8 +236,16 @@ export function UploadsPage() {
                         <Eye className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => setDeleteId(scan.id)}
-                        className="text-red-600 hover:text-red-900"
+                        onClick={() => {
+                          if ((scan._count?.chargeRecords || 0) > 0) {
+                            toast('error', '연결된 장입도 레코드가 있어 삭제할 수 없습니다')
+                            return
+                          }
+                          setDeleteId(scan.id)
+                        }}
+                        className="text-red-600 hover:text-red-900 disabled:cursor-not-allowed disabled:opacity-40"
+                        disabled={(scan._count?.chargeRecords || 0) > 0}
+                        title={(scan._count?.chargeRecords || 0) > 0 ? '연결된 장입도 레코드가 있어 삭제할 수 없습니다' : '삭제'}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>

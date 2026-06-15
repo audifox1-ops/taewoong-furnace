@@ -25,24 +25,50 @@ export interface UploadResult {
   error?: string;
 }
 
+export interface FurnaceFixCandidate {
+  batchId: number;
+  fileName: string;
+  currentFurnaceNo: number | null;
+  currentFurnaceName: string | null;
+  targetFurnaceNo: number | null;
+  targetFurnaceName: string | null;
+  rowCount: number;
+  minTimestamp: string | null;
+  maxTimestamp: string | null;
+}
+
+export interface FurnaceFixResult {
+  batchId: number;
+  fileName: string;
+  fromFurnaceNo: number | null;
+  toFurnaceNo: number | null;
+  rowCount: number;
+  updated: boolean;
+  reason?: string;
+}
+
 @Injectable()
 export class GasReadingService {
   constructor(private prisma: PrismaService) {}
 
   parseFileName(fileName: string): FileParseResult {
+    const normalizeDigits = (value: string) =>
+      value.replace(/[０-９]/g, (digit) => String(digit.charCodeAt(0) - 0xFF10));
+
     const base = fileName.replace(/\.(xlsx|xls|csv)$/i, '');
+    const normalizedBase = normalizeDigits(base);
     let furnaceNo: number | null = null;
     let furnaceName: string | null = null;
     let periodStart: string | null = null;
     let periodEnd: string | null = null;
 
-    const furnaceMatch = base.match(/가열로?\s*(\d+)\s*호기?/i);
+    const furnaceMatch = normalizedBase.match(/가열로?\s*(\d+)\s*호기?/i);
     if (furnaceMatch) {
       furnaceNo = parseInt(furnaceMatch[1]);
       furnaceName = `가열${furnaceNo}호`;
     }
 
-    const dateRangeMatch = base.match(/\((\d{4}-\d{2}-\d{2})\s*[~\-]\s*(\d{4}-\d{2}-\d{2})\)/);
+    const dateRangeMatch = normalizedBase.match(/\((\d{4}-\d{2}-\d{2})\s*[~\-]\s*(\d{4}-\d{2}-\d{2})\)/);
     if (dateRangeMatch) {
       periodStart = dateRangeMatch[1];
       periodEnd = dateRangeMatch[2];
@@ -146,10 +172,19 @@ export class GasReadingService {
       }
 
       const parsed = this.parseFileName(file.originalname);
-      const effectiveFurnaceId = furnaceId || (parsed.furnaceNo
-        ? (await this.prisma.furnace.findUnique({ where: { no: parsed.furnaceNo } }))?.id || 1
-        : 1);
-      const furnace = await this.prisma.furnace.findUnique({ where: { id: effectiveFurnaceId } });
+      const parsedFurnace = parsed.furnaceNo
+        ? await this.prisma.furnace.findUnique({ where: { no: parsed.furnaceNo } })
+        : null;
+      const furnace = furnaceId
+        ? await this.prisma.furnace.findUnique({ where: { id: furnaceId } })
+        : parsedFurnace;
+
+      if (!furnace) {
+        result.error = '가열로 번호를 확인할 수 없습니다. 파일명에 호기를 넣거나 가열로를 직접 선택하세요.';
+        return result;
+      }
+
+      const effectiveFurnaceId = furnace.id;
       result.furnaceNo = furnace?.no || 0;
       result.furnaceName = furnace?.name || '';
 
@@ -278,6 +313,120 @@ export class GasReadingService {
       take: 50,
       include: { furnace: true },
     });
+  }
+
+  async listFurnaceFixCandidates(currentFurnaceNo = 1): Promise<FurnaceFixCandidate[]> {
+    const batches = await this.prisma.importBatch.findMany({
+      where: { furnace: { no: currentFurnaceNo } },
+      include: {
+        furnace: true,
+        gasReadings: {
+          select: { ts: true },
+          orderBy: { ts: 'asc' },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return batches
+      .map((batch) => {
+        const parsed = this.parseFileName(batch.fileName);
+        const targetFurnaceNo = parsed.furnaceNo;
+        return {
+          batchId: batch.id,
+          fileName: batch.fileName,
+          currentFurnaceNo: batch.furnace?.no ?? null,
+          currentFurnaceName: batch.furnace?.name ?? null,
+          targetFurnaceNo,
+          targetFurnaceName: targetFurnaceNo ? `가열${targetFurnaceNo}호` : null,
+          rowCount: batch.rowCount,
+          minTimestamp: batch.gasReadings[0]?.ts?.toISOString() ?? null,
+          maxTimestamp: batch.gasReadings[batch.gasReadings.length - 1]?.ts?.toISOString() ?? null,
+        };
+      })
+      .filter((batch) => batch.targetFurnaceNo != null && batch.targetFurnaceNo !== batch.currentFurnaceNo);
+  }
+
+  async applyFurnaceFix(batchId: number, currentFurnaceNo = 1): Promise<FurnaceFixResult> {
+    const batch = await this.prisma.importBatch.findUnique({
+      where: { id: batchId },
+      include: {
+        furnace: true,
+        gasReadings: {
+          select: { id: true, ts: true },
+          orderBy: { ts: 'asc' },
+        },
+      },
+    });
+
+    if (!batch) {
+      throw new BadRequestException('Import batch not found');
+    }
+    if ((batch.furnace?.no ?? null) !== currentFurnaceNo) {
+      return {
+        batchId,
+        fileName: batch.fileName,
+        fromFurnaceNo: batch.furnace?.no ?? null,
+        toFurnaceNo: null,
+        rowCount: batch.rowCount,
+        updated: false,
+        reason: `현재 호기가 ${currentFurnaceNo}호기가 아니어서 건너뜀`,
+      };
+    }
+
+    const parsed = this.parseFileName(batch.fileName);
+    if (!parsed.furnaceNo) {
+      return {
+        batchId,
+        fileName: batch.fileName,
+        fromFurnaceNo: batch.furnace?.no ?? null,
+        toFurnaceNo: null,
+        rowCount: batch.rowCount,
+        updated: false,
+        reason: '파일명에서 대상 호기를 추출할 수 없습니다',
+      };
+    }
+
+    const targetFurnace = await this.prisma.furnace.findUnique({ where: { no: parsed.furnaceNo } });
+    if (!targetFurnace) {
+      return {
+        batchId,
+        fileName: batch.fileName,
+        fromFurnaceNo: batch.furnace?.no ?? null,
+        toFurnaceNo: parsed.furnaceNo,
+        rowCount: batch.rowCount,
+        updated: false,
+        reason: `대상 호기 ${parsed.furnaceNo}호기를 찾을 수 없습니다`,
+      };
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.importBatch.update({
+        where: { id: batch.id },
+        data: { furnaceId: targetFurnace.id },
+      }),
+      this.prisma.gasReading.updateMany({
+        where: { importBatchId: batch.id },
+        data: { furnaceId: targetFurnace.id },
+      }),
+    ]);
+
+    return {
+      batchId,
+      fileName: batch.fileName,
+      fromFurnaceNo: batch.furnace?.no ?? null,
+      toFurnaceNo: targetFurnace.no,
+      rowCount: batch.rowCount,
+      updated: true,
+    };
+  }
+
+  async applyFurnaceFixes(batchIds: number[], currentFurnaceNo = 1): Promise<FurnaceFixResult[]> {
+    const results: FurnaceFixResult[] = [];
+    for (const batchId of batchIds) {
+      results.push(await this.applyFurnaceFix(batchId, currentFurnaceNo));
+    }
+    return results;
   }
 
   async getUsageForCharge(furnaceId: number, workStart: Date, workEnd: Date) {

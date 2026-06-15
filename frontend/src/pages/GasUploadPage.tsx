@@ -7,7 +7,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 interface QueueItem {
   file: File
   status: 'pending' | 'uploading' | 'completed' | 'error'
-  furnaceNo?: number
+  furnaceNo?: number | null
   periodStart?: string
   periodEnd?: string
   result?: any
@@ -15,15 +15,19 @@ interface QueueItem {
 }
 
 function parseFileName(name: string) {
+  const normalizeDigits = (value: string) =>
+    value.replace(/[０-９]/g, (digit) => String(digit.charCodeAt(0) - 0xFF10))
+
   const base = name.replace(/\.(xlsx|xls|csv)$/i, '')
+  const normalizedBase = normalizeDigits(base)
   let furnaceNo: number | null = null
   let periodStart: string | null = null
   let periodEnd: string | null = null
 
-  const furnaceMatch = base.match(/가열로?\s*(\d+)\s*호기?/i)
+  const furnaceMatch = normalizedBase.match(/가열로?\s*(\d+)\s*호기?/i)
   if (furnaceMatch) furnaceNo = parseInt(furnaceMatch[1])
 
-  const dateMatch = base.match(/\((\d{4}-\d{2}-\d{2})\s*[~\-]\s*(\d{4}-\d{2}-\d{2})\)/)
+  const dateMatch = normalizedBase.match(/\((\d{4}-\d{2}-\d{2})\s*[~\-]\s*(\d{4}-\d{2}-\d{2})\)/)
   if (dateMatch) {
     periodStart = dateMatch[1]
     periodEnd = dateMatch[2]
@@ -65,7 +69,7 @@ export function GasUploadPage() {
         return {
           file,
           status: 'pending' as const,
-          furnaceNo: parsed.furnaceNo || undefined,
+          furnaceNo: parsed.furnaceNo,
           periodStart: parsed.periodStart || undefined,
           periodEnd: parsed.periodEnd || undefined,
         }
@@ -101,8 +105,13 @@ export function GasUploadPage() {
       setQueue(prev => prev.map((q, j) => j === idx ? { ...q, status: 'uploading' } : q))
 
       try {
+        if (!item.furnaceNo) {
+          throw new Error('가열로 번호를 선택해 주세요')
+        }
+
         const formData = new FormData()
         formData.append('files', item.file)
+        formData.append('furnaceId', String(item.furnaceNo))
         formData.append('duplicateMode', duplicateMode)
 
         const res = await api.post('/gas-readings/upload-batch', formData, {
@@ -133,7 +142,7 @@ export function GasUploadPage() {
   const clearQueue = () => setQueue([])
   const clearCompleted = () => setQueue(prev => prev.filter(q => q.status !== 'completed'))
 
-  const updateItemFurnace = (index: number, furnaceNo: number) => {
+  const updateItemFurnace = (index: number, furnaceNo: number | null) => {
     setQueue(prev => prev.map((q, i) => i === index ? { ...q, furnaceNo } : q))
   }
 
@@ -207,9 +216,13 @@ export function GasUploadPage() {
                       {item.periodStart && ` · ${item.periodStart} ~ ${item.periodEnd}`}
                     </p>
                   </div>
-                  {item.status === 'pending' && item.furnaceNo && (
-                    <select value={item.furnaceNo} onChange={(e) => updateItemFurnace(idx, Number(e.target.value))}
-                      className="text-xs border rounded px-2 py-1">
+                  {item.status === 'pending' && (
+                    <select
+                      value={item.furnaceNo ?? ''}
+                      onChange={(e) => updateItemFurnace(idx, e.target.value ? Number(e.target.value) : null)}
+                      className="text-xs border rounded px-2 py-1"
+                    >
+                      <option value="">가열로 선택</option>
                       {furnaces?.map((f: any) => <option key={f.no} value={f.no}>{f.name}</option>)}
                     </select>
                   )}

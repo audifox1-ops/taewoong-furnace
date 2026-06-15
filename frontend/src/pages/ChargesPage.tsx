@@ -238,16 +238,34 @@ export function ChargesPage() {
       gasAfter: r.gasAfter === '' ? null : r.gasAfter,
       note: r.note,
     }))
-    const newOnes = rows.filter(r => !r.id).map(r => ({
-      chargeNo: r.chargeNo,
-      furnaceId: furnaces?.find((f: any) => f.no === r.furnaceNo)?.id || 1,
-      gasBefore: r.gasBefore === '' ? null : r.gasBefore,
-      gasAfter: r.gasAfter === '' ? null : r.gasAfter,
-      workDate: r.workDate,
-      shift: r.shift,
-      source: r.source,
-      note: r.note,
-    }))
+    const newOnes: Array<{
+      chargeNo: string
+      furnaceId: number
+      gasBefore: number | null
+      gasAfter: number | null
+      workDate: string
+      shift: string
+      source: string
+      note: string
+    }> = []
+
+    for (const r of rows.filter(row => !row.id)) {
+      const furnace = furnaces?.find((f: any) => f.no === r.furnaceNo)
+      if (!furnace) {
+        throw new Error(`가열로 ${r.furnaceNo}를 찾을 수 없습니다`)
+      }
+
+      newOnes.push({
+        chargeNo: r.chargeNo,
+        furnaceId: furnace.id,
+        gasBefore: r.gasBefore === '' ? null : r.gasBefore,
+        gasAfter: r.gasAfter === '' ? null : r.gasAfter,
+        workDate: r.workDate,
+        shift: r.shift,
+        source: r.source,
+        note: r.note,
+      })
+    }
 
     try {
       if (existing.length > 0) await saveMutation.mutateAsync({ updates: existing })

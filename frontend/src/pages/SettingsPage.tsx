@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import api from '@/lib/api'
 import { useToast } from '@/components/Toast'
-import { Settings, Clock, Save, RotateCcw } from 'lucide-react'
+import { Settings, Clock, Save, RotateCcw, RefreshCw, FileSpreadsheet, AlertTriangle } from 'lucide-react'
 
 interface ShiftConfig {
   dayStart: string
@@ -33,6 +35,7 @@ function saveConfig(config: ShiftConfig) {
 
 export function SettingsPage() {
   const { toast } = useToast()
+  const queryClient = useQueryClient()
   const [config, setConfig] = useState<ShiftConfig>(loadConfig)
 
   const handleSave = () => {
@@ -45,6 +48,47 @@ export function SettingsPage() {
     saveConfig(DEFAULT_CONFIG)
     toast('info', '기본값으로 초기화되었습니다')
   }
+
+  const { data: furnaceFixCandidates, isLoading: isLoadingFixCandidates } = useQuery({
+    queryKey: ['gas-reading-furnace-fix-candidates'],
+    queryFn: () => api.get('/gas-readings/furnace-fix-candidates?currentFurnaceNo=1').then((res) => Array.isArray(res.data) ? res.data : []),
+  })
+
+  const fixOneMutation = useMutation({
+    mutationFn: (batchId: number) => api.post('/gas-readings/fix-furnace-batch', { batchId, currentFurnaceNo: 1 }).then((res) => res.data),
+    onSuccess: (result) => {
+      if (result.updated) {
+        toast('success', `${result.fileName}를 ${result.toFurnaceNo}호기로 수정했습니다`)
+      } else {
+        toast('info', result.reason || '수정할 항목이 없습니다')
+      }
+      queryClient.invalidateQueries({ queryKey: ['gas-reading-furnace-fix-candidates'] })
+      queryClient.invalidateQueries({ queryKey: ['upload-history'] })
+      queryClient.invalidateQueries({ queryKey: ['gas-readings'] })
+    },
+    onError: (error: any) => {
+      const message = error?.response?.data?.message
+      toast('error', typeof message === 'string' ? message : '호기 수정 중 오류가 발생했습니다')
+    },
+  })
+
+  const fixAllMutation = useMutation({
+    mutationFn: () => api.post('/gas-readings/fix-furnace-batches', {
+      batchIds: (furnaceFixCandidates || []).map((item: any) => item.batchId),
+      currentFurnaceNo: 1,
+    }).then((res) => res.data),
+    onSuccess: (results) => {
+      const updated = results.filter((item: any) => item.updated).length
+      const skipped = results.length - updated
+      toast('success', `일괄 수정 완료: ${updated}건 적용, ${skipped}건 건너뜀`)
+      queryClient.invalidateQueries({ queryKey: ['gas-reading-furnace-fix-candidates'] })
+      queryClient.invalidateQueries({ queryKey: ['upload-history'] })
+      queryClient.invalidateQueries({ queryKey: ['gas-readings'] })
+    },
+    onError: () => {
+      toast('error', '일괄 수정 중 오류가 발생했습니다')
+    },
+  })
 
   const parseTime = (t: string) => {
     const [h, m] = t.split(':').map(Number)
@@ -162,6 +206,58 @@ export function SettingsPage() {
               <dd className="font-medium text-gray-900">SQLite</dd>
             </div>
           </dl>
+        </div>
+
+        <div className="bg-white shadow rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <FileSpreadsheet className="h-5 w-5 text-blue-500 mr-2" />
+              <h2 className="text-lg font-medium text-gray-900">가열로 일괄 수정</h2>
+            </div>
+            <button
+              onClick={() => fixAllMutation.mutate()}
+              disabled={fixAllMutation.isPending || !furnaceFixCandidates?.length}
+              className="inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 mr-1 ${fixAllMutation.isPending ? 'animate-spin' : ''}`} />
+              전체 적용
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+            <AlertTriangle className="h-4 w-4" />
+            <span>파일명에서 추출된 호기와 현재 저장된 호기가 다른 배치만 표시합니다. 먼저 미리보기로 확인한 뒤 적용하세요.</span>
+          </div>
+
+          {isLoadingFixCandidates ? (
+            <div className="text-sm text-gray-500">후보를 불러오는 중...</div>
+          ) : !furnaceFixCandidates?.length ? (
+            <div className="text-sm text-gray-500">수정이 필요한 가열로 배치가 없습니다.</div>
+          ) : (
+            <div className="space-y-3">
+              {furnaceFixCandidates.map((item: any) => (
+                <div key={item.batchId} className="border rounded-lg p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{item.fileName}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      현재 {item.currentFurnaceName || `${item.currentFurnaceNo}호기`} {'->'} 대상 {item.targetFurnaceName || '미확인'}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      행 수 {item.rowCount?.toLocaleString()}건
+                      {item.minTimestamp && ` · ${new Date(item.minTimestamp).toLocaleString()}`}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => fixOneMutation.mutate(item.batchId)}
+                    disabled={fixOneMutation.isPending}
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    개별 수정
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

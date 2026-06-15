@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { Shift } from '@prisma/client';
@@ -123,8 +123,14 @@ export class UploadService {
   }
 
   async deleteScan(id: number) {
-    const scan = await this.prisma.chargeScan.findUnique({ where: { id } });
+    const scan = await this.prisma.chargeScan.findUnique({
+      where: { id },
+      include: { _count: { select: { chargeRecords: true } } },
+    });
     if (!scan) throw new NotFoundException('Charge scan not found');
+    if (scan._count.chargeRecords > 0) {
+      throw new ConflictException('Linked charge records exist. Delete or unlink them first.');
+    }
 
     const { error } = await this.supabase.storage
       .from(this.bucket)
