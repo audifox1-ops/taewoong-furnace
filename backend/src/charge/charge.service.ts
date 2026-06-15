@@ -21,8 +21,8 @@ export class ChargeService {
     if (shift) where.shift = shift as Shift;
     if (startDate || endDate) {
       where.workDate = {};
-      if (startDate) where.workDate.gte = new Date(startDate);
-      if (endDate) where.workDate.lte = new Date(endDate);
+      if (startDate) where.workDate.gte = this.parseDateFilter(startDate);
+      if (endDate) where.workDate.lte = this.parseDateFilter(endDate, true);
     }
 
     return this.prisma.chargeEntry.findMany({
@@ -289,8 +289,8 @@ export class ChargeService {
     if (furnaceId) where.furnaceId = furnaceId;
     if (startDate || endDate) {
       where.workDate = {};
-      if (startDate) where.workDate.gte = new Date(startDate);
-      if (endDate) where.workDate.lte = new Date(endDate);
+      if (startDate) where.workDate.gte = this.parseDateFilter(startDate);
+      if (endDate) where.workDate.lte = this.parseDateFilter(endDate, true);
     }
 
     const charges = await this.prisma.chargeEntry.findMany({
@@ -309,7 +309,7 @@ export class ChargeService {
           chargeCount: 0,
         };
       }
-      if (charge.usage) {
+      if (charge.usage != null) {
         acc[key].totalUsage += charge.usage;
       }
       acc[key].chargeCount++;
@@ -326,17 +326,36 @@ export class ChargeService {
   }
 
   private extractDateFromChargeNo(chargeNo: string): Date {
-    const parts = chargeNo.split('-');
-    if (parts.length < 1) throw new BadRequestException('Invalid charge number format');
+    const match = chargeNo.match(/^(\d{6})-\d{3}$/);
+    if (!match) {
+      throw new BadRequestException('Invalid date in charge number');
+    }
 
-    const dateStr = parts[0];
-    if (dateStr.length !== 6) throw new BadRequestException('Invalid date in charge number');
+    const dateStr = match[1];
 
     const year = parseInt('20' + dateStr.substring(0, 2));
     const month = parseInt(dateStr.substring(2, 4)) - 1;
     const day = parseInt(dateStr.substring(4, 6));
 
     return new Date(year, month, day);
+  }
+
+  private parseDateFilter(value: string, endOfDay = false): Date {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new BadRequestException(`Invalid date: ${value}`);
+    }
+
+    const isDateOnly = !value.includes('T');
+    if (isDateOnly) {
+      if (endOfDay) {
+        parsed.setHours(23, 59, 59, 999);
+      } else {
+        parsed.setHours(0, 0, 0, 0);
+      }
+    }
+
+    return parsed;
   }
 
   private determineShift(workDate: Date): string {

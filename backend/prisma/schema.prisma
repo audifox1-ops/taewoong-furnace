@@ -103,6 +103,7 @@ model ChargeEntry {
   @@index([workDate])
   @@index([furnaceId, workDate])
   @@index([chargeRecordId])
+  @@unique([chargeNo])
   @@schema("taewoong_furnace")
 }
 

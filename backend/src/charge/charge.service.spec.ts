@@ -144,6 +144,31 @@ describe('ChargeService', () => {
     });
   });
 
+  describe('getUsageSummary', () => {
+    it('should include zero usage values in the summary', async () => {
+      prismaMock.chargeEntry.findMany.mockResolvedValue([
+        {
+          furnaceId: 1,
+          shift: 'day',
+          usage: 0,
+          furnace: { name: 'Furnace 1' },
+        },
+      ]);
+
+      const result = await service.getUsageSummary();
+
+      expect(result).toEqual([
+        {
+          furnaceId: 1,
+          furnaceName: 'Furnace 1',
+          shift: 'day',
+          totalUsage: 0,
+          chargeCount: 1,
+        },
+      ]);
+    });
+  });
+
   describe('extractDateFromChargeNo', () => {
     it('should extract date from charge number format YYMMDD-NNN', () => {
       const result = (service as any).extractDateFromChargeNo('260601-001');

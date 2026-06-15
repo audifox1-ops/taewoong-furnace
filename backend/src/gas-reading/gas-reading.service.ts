@@ -56,8 +56,8 @@ export class GasReadingService {
     if (furnaceId) where.furnaceId = furnaceId;
     if (startDate || endDate) {
       where.ts = {};
-      if (startDate) where.ts.gte = new Date(startDate);
-      if (endDate) where.ts.lte = new Date(endDate);
+      if (startDate) where.ts.gte = this.parseDateFilter(startDate);
+      if (endDate) where.ts.lte = this.parseDateFilter(endDate, true);
     }
 
     const [data, total] = await Promise.all([
@@ -79,6 +79,24 @@ export class GasReadingService {
       where: { furnaceId, ts: { gte: start, lte: end } },
       orderBy: { ts: 'asc' },
     });
+  }
+
+  private parseDateFilter(value: string, endOfDay = false): Date {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new BadRequestException(`Invalid date: ${value}`);
+    }
+
+    const isDateOnly = !value.includes('T');
+    if (isDateOnly) {
+      if (endOfDay) {
+        parsed.setHours(23, 59, 59, 999);
+      } else {
+        parsed.setHours(0, 0, 0, 0);
+      }
+    }
+
+    return parsed;
   }
 
   async findClosestReading(furnaceId: number, targetTime: Date) {
