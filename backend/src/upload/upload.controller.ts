@@ -1,32 +1,24 @@
-import { Controller, Get, Post, Delete, Param, Body, Query, UseGuards, UploadedFile, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, Query, UploadedFile, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { UploadService } from './upload.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
-import { Roles } from '../auth/roles.decorator';
+
+
+
 
 @ApiTags('uploads')
 @Controller('uploads')
 export class UploadController {
   constructor(private uploadService: UploadService) {}
 
-  @Post('pdf')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  @ApiBearerAuth()
-  @ApiConsumes('multipart/form-data')
+  @Post('pdf')  @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Upload PDF scan (admin only)' })
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 50 * 1024 * 1024 } }))
   async uploadPdf(@UploadedFile() file: Express.Multer.File) {
     return this.uploadService.uploadPdf(file);
   }
 
-  @Post('pdf/batch')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  @ApiBearerAuth()
-  @ApiConsumes('multipart/form-data')
+  @Post('pdf/batch')  @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Upload multiple PDF scans (admin only)' })
   @UseInterceptors(FilesInterceptor('files', 100, { limits: { fileSize: 50 * 1024 * 1024 } }))
   async uploadMultiplePdfs(@UploadedFiles() files: Express.Multer.File[]) {
@@ -42,26 +34,17 @@ export class UploadController {
     return results;
   }
 
-  @Get('pdf/:id/url')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get PDF presigned URL' })
+  @Get('pdf/:id/url')  @ApiOperation({ summary: 'Get PDF presigned URL' })
   async getPdfUrl(@Param('id') id: string) {
     return this.uploadService.getPdfUrl(parseInt(id));
   }
 
-  @Get('pdf')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'List all PDF scans' })
+  @Get('pdf')  @ApiOperation({ summary: 'List all PDF scans' })
   async listScans() {
     return this.uploadService.listScans();
   }
 
-  @Post('charge-record')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create charge record from PDF page' })
+  @Post('charge-record')  @ApiOperation({ summary: 'Create charge record from PDF page' })
   async createChargeRecord(@Body() body: {
     chargeScanId: number;
     pageIndex: number;
@@ -82,19 +65,12 @@ export class UploadController {
     });
   }
 
-  @Get('charge-records')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get charge records' })
+  @Get('charge-records')  @ApiOperation({ summary: 'Get charge records' })
   async getChargeRecords(@Query('chargeScanId') chargeScanId?: string) {
     return this.uploadService.getChargeRecords(chargeScanId ? parseInt(chargeScanId) : undefined);
   }
 
-  @Delete('pdf/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Delete PDF scan (admin only)' })
+  @Delete('pdf/:id')  @ApiOperation({ summary: 'Delete PDF scan (admin only)' })
   async deleteScan(@Param('id') id: string) {
     return this.uploadService.deleteScan(parseInt(id));
   }

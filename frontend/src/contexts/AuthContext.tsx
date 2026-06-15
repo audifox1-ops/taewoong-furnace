@@ -1,5 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import api from '@/lib/api'
+import { createContext, useContext, ReactNode } from 'react'
 
 interface User {
   id: number
@@ -19,40 +18,22 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'))
-  const [isLoading, setIsLoading] = useState(true)
+  // 항상 로그인된 더미 관리자 상태 반환
+  const dummyUser: User = { id: 1, username: 'admin', role: 'admin' }
+  const dummyToken = 'dummy-token'
 
-  useEffect(() => {
-    if (token) {
-      api.get('/auth/profile')
-        .then((res) => setUser(res.data))
-        .catch(() => {
-          localStorage.removeItem('token')
-          setToken(null)
-        })
-        .finally(() => setIsLoading(false))
-    } else {
-      setIsLoading(false)
-    }
-  }, [token])
-
-  const login = async (username: string, password: string) => {
-    const res = await api.post('/auth/login', { username, password })
-    const { token: access_token, user: userData } = res.data
-    localStorage.setItem('token', access_token)
-    setToken(access_token)
-    setUser(userData)
-  }
-
-  const logout = () => {
-    localStorage.removeItem('token')
-    setToken(null)
-    setUser(null)
-  }
+  const login = async () => {}
+  const logout = () => {}
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isAdmin: user?.role === 'admin', isLoading }}>
+    <AuthContext.Provider value={{ 
+      user: dummyUser, 
+      token: dummyToken, 
+      login, 
+      logout, 
+      isAdmin: true, 
+      isLoading: false 
+    }}>
       {children}
     </AuthContext.Provider>
   )

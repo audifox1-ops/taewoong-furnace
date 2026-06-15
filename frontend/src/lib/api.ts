@@ -7,13 +7,7 @@ const api = axios.create({
   },
 })
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
+// 토큰을 사용하는 interceptor 제거
 
 api.interceptors.response.use(
   (response) => {

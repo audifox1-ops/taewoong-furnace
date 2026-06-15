@@ -1,9 +1,9 @@
-import { Controller, Get, Post, Param, Body, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Param, Body, } from '@nestjs/common';
+import { ApiTags, ApiOperation, } from '@nestjs/swagger';
 import { FurnaceService } from './furnace.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
-import { Roles } from '../auth/roles.decorator';
+
+
+
 
 @ApiTags('furnaces')
 @Controller('furnaces')
@@ -22,20 +22,12 @@ export class FurnaceController {
     return this.furnaceService.findOne(parseInt(id));
   }
 
-  @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create furnace (admin only)' })
+  @Post()  @ApiOperation({ summary: 'Create furnace (admin only)' })
   async create(@Body() body: { no: number; name: string }) {
     return this.furnaceService.create(body);
   }
 
-  @Post('seed')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Seed furnaces (admin only)' })
+  @Post('seed')  @ApiOperation({ summary: 'Seed furnaces (admin only)' })
   async seed() {
     return this.furnaceService.seed();
   }

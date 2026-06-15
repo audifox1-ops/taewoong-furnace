@@ -35,7 +35,7 @@ export function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
 
   useEffect(() => {
     setMobileOpen(false)
@@ -102,14 +102,6 @@ export function Layout() {
                       <span className="ml-1 px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">관리자</span>
                     )}
                   </div>
-                  <button
-                    onClick={logout}
-                    className="ml-3 inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
-                    aria-label="로그아웃"
-                  >
-                    <LogOut className="h-4 w-4" />
-                  </button>
-                </div>
               )}
               <div className="md:hidden">
                 <button
@@ -185,16 +177,6 @@ export function Layout() {
                 )
               })}
               
-              <div className="border-t border-gray-200 mt-4 pt-4">
-                {user && (
-                  <button
-                    onClick={() => { setMobileOpen(false); logout() }}
-                    className="flex items-center w-full px-3 py-3 rounded-md text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                  >
-                    <LogOut className="mr-3 h-5 w-5 text-gray-400" />
-                    로그아웃
-                  </button>
-                )}
               </div>
             </div>
           </div>

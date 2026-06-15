@@ -1,20 +1,17 @@
-import { Controller, Get, Post, Query, Param, Body, UseGuards, UploadedFile, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Query, Param, Body, UploadedFile, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiConsumes } from '@nestjs/swagger';
 import { GasReadingService } from './gas-reading.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
-import { Roles } from '../auth/roles.decorator';
+
+
+
 
 @ApiTags('gas-readings')
 @Controller('gas-readings')
 export class GasReadingController {
   constructor(private gasReadingService: GasReadingService) {}
 
-  @Get()
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get gas readings with pagination' })
+  @Get()  @ApiOperation({ summary: 'Get gas readings with pagination' })
   async findAll(
     @Query('furnaceId') furnaceId?: string,
     @Query('startDate') startDate?: string,
@@ -30,10 +27,7 @@ export class GasReadingController {
     );
   }
 
-  @Get('furnace/:furnaceId')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get gas readings for specific furnace' })
+  @Get('furnace/:furnaceId')  @ApiOperation({ summary: 'Get gas readings for specific furnace' })
   async findByFurnace(
     @Param('furnaceId') furnaceId: string,
     @Query('startDate') startDate?: string,
@@ -44,28 +38,17 @@ export class GasReadingController {
     return this.gasReadingService.findByFurnaceAndTimeRange(parseInt(furnaceId), start, end);
   }
 
-  @Get('parse-filename')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Parse furnace/date from filename' })
+  @Get('parse-filename')  @ApiOperation({ summary: 'Parse furnace/date from filename' })
   parseFilename(@Query('name') name: string) {
     return this.gasReadingService.parseFileName(name);
   }
 
-  @Get('upload-history')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get upload history' })
+  @Get('upload-history')  @ApiOperation({ summary: 'Get upload history' })
   async getUploadHistory() {
     return this.gasReadingService.getUploadHistory();
   }
 
-  @Post('upload')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  @ApiBearerAuth()
-  @ApiConsumes('multipart/form-data')
+  @Post('upload')  @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Upload single Excel/CSV (admin only)' })
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
   async upload(
@@ -80,11 +63,7 @@ export class GasReadingController {
     );
   }
 
-  @Post('upload-batch')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  @ApiBearerAuth()
-  @ApiConsumes('multipart/form-data')
+  @Post('upload-batch')  @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Upload multiple Excel/CSV files (admin only)' })
   @UseInterceptors(FilesInterceptor('files', 50, { limits: { fileSize: 10 * 1024 * 1024 } }))
   async uploadBatch(
