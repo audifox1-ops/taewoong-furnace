@@ -10,3 +10,6 @@ build/
 coverage/
 .cache/
 samples/node_modules/
+*.tsbuildinfo
+*.d.ts
+vite.config.js
