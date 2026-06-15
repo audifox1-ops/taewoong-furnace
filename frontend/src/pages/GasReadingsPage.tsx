@@ -2,10 +2,12 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { format } from 'date-fns'
-import { Download, Filter } from 'lucide-react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { Download, Filter, Thermometer, Zap, LineChart as LineChartIcon } from 'lucide-react'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { TableSkeleton } from '@/components/Skeleton'
 import { useToast } from '@/components/Toast'
+
+type ChartType = 'gas' | 'temp' | 'combined'
 
 export function GasReadingsPage() {
   const { toast } = useToast()
@@ -13,6 +15,7 @@ export function GasReadingsPage() {
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [page, setPage] = useState(1)
+  const [chartType, setChartType] = useState<ChartType>('gas')
   const limit = 100
 
   const { data: furnaces } = useQuery({
@@ -125,19 +128,60 @@ export function GasReadingsPage() {
 
       {data?.data && data.data.length > 0 && (
         <div className="bg-white shadow rounded-lg p-4 mb-6">
-          <h3 className="text-sm font-medium text-gray-700 mb-3">가스 누적지침 시계열</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-gray-700">시계열 차트</h3>
+            <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+              <button
+                onClick={() => setChartType('gas')}
+                className={`flex items-center px-3 py-1 rounded text-xs font-medium transition-colors ${
+                  chartType === 'gas' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Zap className="h-3 w-3 mr-1" />
+                가스
+              </button>
+              <button
+                onClick={() => setChartType('temp')}
+                className={`flex items-center px-3 py-1 rounded text-xs font-medium transition-colors ${
+                  chartType === 'temp' ? 'bg-white shadow text-red-600' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Thermometer className="h-3 w-3 mr-1" />
+                온도
+              </button>
+              <button
+                onClick={() => setChartType('combined')}
+                className={`flex items-center px-3 py-1 rounded text-xs font-medium transition-colors ${
+                  chartType === 'combined' ? 'bg-white shadow text-purple-600' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <LineChartIcon className="h-3 w-3 mr-1" />
+                복합
+              </button>
+            </div>
+          </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data.data.map((r: any) => ({
                 time: format(new Date(r.ts), 'HH:mm'),
                 gasCumulative: r.gasCumulative,
                 temp: r.temp,
+                gas: r.gas,
               }))}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="time" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip />
-                <Line type="monotone" dataKey="gasCumulative" stroke="#3B82F6" name="누적지침" dot={false} />
+                <Legend />
+                {(chartType === 'gas' || chartType === 'combined') && (
+                  <Line type="monotone" dataKey="gasCumulative" stroke="#3B82F6" name="누적지침" dot={false} />
+                )}
+                {chartType === 'gas' && (
+                  <Line type="monotone" dataKey="gas" stroke="#10B981" name="가스" dot={false} />
+                )}
+                {(chartType === 'temp' || chartType === 'combined') && (
+                  <Line type="monotone" dataKey="temp" stroke="#EF4444" name="온도" dot={false} />
+                )}
               </LineChart>
             </ResponsiveContainer>
           </div>

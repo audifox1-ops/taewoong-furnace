@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
-import { Factory, FileText, FileSpreadsheet, Table, Upload, Zap, Calendar, AlertCircle } from 'lucide-react'
+import { Factory, FileText, FileSpreadsheet, Table, Upload, Zap, Calendar, AlertCircle, TrendingUp } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, Legend } from 'recharts'
+import { format, subDays } from 'date-fns'
 
 export function DashboardPage() {
   const { data: furnaces, error: furnacesError } = useQuery({
@@ -18,9 +19,17 @@ export function DashboardPage() {
   })
 
   const today = new Date().toISOString().slice(0, 10)
+  const weekAgo = format(subDays(new Date(), 7), 'yyyy-MM-dd')
+  
   const { data: usageSummary } = useQuery({
     queryKey: ['usage-summary', today],
     queryFn: () => api.get(`/charges/summary/usage?startDate=${today}&endDate=${today}T23:59:59`).then(r => Array.isArray(r.data) ? r.data : []),
+    retry: false,
+  })
+
+  const { data: weeklyTrend } = useQuery({
+    queryKey: ['weekly-trend', weekAgo, today],
+    queryFn: () => api.get(`/analysis/usage-trend?furnaceId=1&startDate=${weekAgo}&endDate=${today}`).then(r => Array.isArray(r.data) ? r.data : []),
     retry: false,
   })
 
@@ -59,21 +68,44 @@ export function DashboardPage() {
         ))}
       </div>
 
-      {Array.isArray(usageSummary) && usageSummary.length > 0 && (
-        <div className="bg-white shadow rounded-lg p-4 mb-6">
-          <h3 className="text-sm font-medium text-gray-700 mb-3">오늘의 호기별 사용량</h3>
-          <div className="h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={usageSummary.map((s: any) => ({ name: s.furnaceName, usage: Math.round(s.totalUsage) }))}>
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Bar dataKey="usage" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {Array.isArray(usageSummary) && usageSummary.length > 0 && (
+          <div className="bg-white shadow rounded-lg p-4">
+            <h3 className="text-sm font-medium text-gray-700 mb-3">오늘의 호기별 사용량</h3>
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={usageSummary.map((s: any) => ({ name: s.furnaceName, usage: Math.round(s.totalUsage) }))}>
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Bar dataKey="usage" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {Array.isArray(weeklyTrend) && weeklyTrend.length > 0 && (
+          <div className="bg-white shadow rounded-lg p-4">
+            <div className="flex items-center mb-3">
+              <TrendingUp className="h-4 w-4 text-green-500 mr-2" />
+              <h3 className="text-sm font-medium text-gray-700">최근 7일 사용량 추이</h3>
+            </div>
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={weeklyTrend}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="usage" stroke="#3B82F6" name="사용량" dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="bg-white shadow rounded-lg p-6">

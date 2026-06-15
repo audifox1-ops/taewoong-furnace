@@ -38,7 +38,14 @@ export function Layout() {
   const { user, logout } = useAuth()
 
   useEffect(() => {
+    setMobileOpen(false)
+  }, [location.pathname])
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && mobileOpen) {
+        setMobileOpen(false)
+      }
       if (e.altKey && !e.ctrlKey && !e.metaKey) {
         const shortcuts: Record<string, string> = {
           '1': '/', '2': '/gas-readings', '3': '/gas-upload',
@@ -53,11 +60,11 @@ export function Layout() {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [navigate])
+  }, [navigate, mobileOpen])
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow" aria-label="Main navigation">
+      <nav className="bg-white shadow" aria-label="메인 내비게이션">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex">
@@ -72,7 +79,7 @@ export function Layout() {
                     <Link
                       key={item.name}
                       to={item.href}
-                      className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                      className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors ${
                         isActive
                           ? 'border-blue-500 text-gray-900'
                           : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
@@ -98,6 +105,7 @@ export function Layout() {
                   <button
                     onClick={logout}
                     className="ml-3 inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
+                    aria-label="로그아웃"
                   >
                     <LogOut className="h-4 w-4" />
                   </button>
@@ -107,7 +115,8 @@ export function Layout() {
                 <button
                   onClick={() => setMobileOpen(!mobileOpen)}
                   className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
-                  aria-label="Toggle navigation"
+                  aria-label={mobileOpen ? '메뉴 닫기' : '메뉴 열기'}
+                  aria-expanded={mobileOpen}
                 >
                   {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                 </button>
@@ -115,41 +124,83 @@ export function Layout() {
             </div>
           </div>
         </div>
+      </nav>
 
-        {mobileOpen && (
-          <div className="md:hidden border-t border-gray-200">
-            <div className="px-2 pt-2 pb-3 space-y-1">
+      {mobileOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <div 
+            className="fixed inset-0 bg-black/20 transition-opacity"
+            onClick={() => setMobileOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="fixed inset-y-0 left-0 w-72 bg-white shadow-xl transform transition-transform">
+            <div className="flex items-center justify-between px-4 h-16 border-b border-gray-200">
+              <div className="flex items-center">
+                <Factory className="h-6 w-6 text-blue-600" />
+                <span className="ml-2 text-lg font-bold text-gray-900">TAEWOONG</span>
+              </div>
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+                aria-label="메뉴 닫기"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            {user && (
+              <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                      <User className="h-5 w-5 text-blue-600" />
+                    </div>
+                  </div>
+                  <div className="ml-3">
+                    <div className="text-sm font-medium text-gray-900">{user.username}</div>
+                    <div className="text-xs text-gray-500">
+                      {user.role === 'admin' ? '관리자' : '사용자'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="px-2 py-4 space-y-1 overflow-y-auto h-[calc(100vh-4rem)]">
               {navigation.map((item) => {
                 const isActive = location.pathname === item.href
                 return (
                   <Link
                     key={item.name}
                     to={item.href}
-                    onClick={() => setMobileOpen(false)}
-                    className={`flex items-center px-3 py-2 rounded-md text-base font-medium ${
+                    className={`flex items-center px-3 py-3 rounded-md text-base font-medium transition-colors ${
                       isActive
-                        ? 'bg-blue-50 text-blue-700'
+                        ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-500'
                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                     }`}
                   >
-                    <item.icon className="mr-3 h-5 w-5" />
+                    <item.icon className={`mr-3 h-5 w-5 ${isActive ? 'text-blue-500' : 'text-gray-400'}`} />
                     {item.name}
                   </Link>
                 )
               })}
-              {user && (
-                <button
-                  onClick={() => { setMobileOpen(false); logout() }}
-                  className="flex items-center w-full px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                >
-                  <LogOut className="mr-3 h-5 w-5" />
-                  로그아웃
-                </button>
-              )}
+              
+              <div className="border-t border-gray-200 mt-4 pt-4">
+                {user && (
+                  <button
+                    onClick={() => { setMobileOpen(false); logout() }}
+                    className="flex items-center w-full px-3 py-3 rounded-md text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  >
+                    <LogOut className="mr-3 h-5 w-5 text-gray-400" />
+                    로그아웃
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        )}
-      </nav>
+        </div>
+      )}
+
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <ErrorBoundary>
           <Outlet />

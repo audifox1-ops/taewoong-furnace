@@ -54,7 +54,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div key={t.id} className={`flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg ${bgColors[t.type]} animate-slide-in`}>
             {icons[t.type]}
             <span className="text-sm text-gray-800">{t.message}</span>
-            <button onClick={() => removeToast(t.id)} className="ml-2 text-gray-400 hover:text-gray-600">
+            <button 
+              onClick={() => removeToast(t.id)} 
+              className="ml-2 text-gray-400 hover:text-gray-600"
+              aria-label="알림 닫기"
+            >
               <X className="h-4 w-4" />
             </button>
           </div>

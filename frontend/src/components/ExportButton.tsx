@@ -23,8 +23,11 @@ export function ExportButton({ headers, rows, filename, label = '엑셀 내보�
   }
 
   return (
-    <button onClick={handleExport}
-      className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+    <button 
+      onClick={handleExport}
+      className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+      aria-label={`${label} - ${filename}`}
+    >
       <Download className="h-4 w-4 mr-1" />
       {label}
     </button>

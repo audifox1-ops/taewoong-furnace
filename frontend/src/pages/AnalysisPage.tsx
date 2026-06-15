@@ -106,7 +106,7 @@ export function AnalysisPage() {
 
       {/* Filters */}
       <div className="bg-white shadow rounded-lg p-4 mb-6">
-        <div className="flex flex-wrap gap-4 items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">가열로</label>
             <select
@@ -225,23 +225,23 @@ export function AnalysisPage() {
                 <h3 className="text-sm font-medium text-gray-500 mb-3">
                   {selectedCharge.chargeNo} — {selectedCharge.furnace?.name} — {shiftLabel(selectedCharge.shift)}
                 </h3>
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div className="bg-blue-50 rounded-lg p-3 text-center">
                     <p className="text-xs text-gray-500">사용전</p>
-                    <p className="text-lg font-bold text-blue-700">{selectedCharge.gasBefore?.toFixed(2) ?? '-'}</p>
+                    <p className="text-base sm:text-lg font-bold text-blue-700">{selectedCharge.gasBefore?.toFixed(2) ?? '-'}</p>
                   </div>
                   <div className="bg-green-50 rounded-lg p-3 text-center">
                     <p className="text-xs text-gray-500">사용후</p>
-                    <p className="text-lg font-bold text-green-700">{selectedCharge.gasAfter?.toFixed(2) ?? '-'}</p>
+                    <p className="text-base sm:text-lg font-bold text-green-700">{selectedCharge.gasAfter?.toFixed(2) ?? '-'}</p>
                   </div>
                   <div className="bg-orange-50 rounded-lg p-3 text-center">
                     <p className="text-xs text-gray-500">사용량</p>
-                    <p className="text-lg font-bold text-orange-700">{selectedCharge.usage?.toFixed(2) ?? '-'}</p>
+                    <p className="text-base sm:text-lg font-bold text-orange-700">{selectedCharge.usage?.toFixed(2) ?? '-'}</p>
                   </div>
                   <div className="bg-purple-50 rounded-lg p-3 text-center">
                     <p className="text-xs text-gray-500">원단위</p>
-                    <p className="text-lg font-bold text-purple-700">
-                      {selectedCharge.gasUsage?.unitRate?.toFixed(4) ?? '-'}
+                    <p className="text-base sm:text-lg font-bold text-purple-700">
+                      {selectedCharge.chargeRecord?.unitRate?.toFixed(4) ?? '-'}
                     </p>
                   </div>
                 </div>
