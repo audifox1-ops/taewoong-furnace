@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Query, Param, Body, UploadedFile, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Post, Query, Param, Body, UploadedFile, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiConsumes } from '@nestjs/swagger';
 import { GasReadingService } from './gas-reading.service';
@@ -79,6 +79,9 @@ export class GasReadingController {
     @Body('furnaceId') furnaceId?: string,
     @Body('duplicateMode') duplicateMode?: string,
   ) {
+    if (!files?.length) {
+      throw new BadRequestException('업로드할 파일이 없습니다');
+    }
     return this.gasReadingService.uploadBatch(
       files,
       furnaceId ? [parseInt(furnaceId)] : undefined,

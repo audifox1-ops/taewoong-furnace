@@ -75,16 +75,36 @@ export class ChargeService {
   }
 
   async update(id: number, data: {
-    gasBefore?: number;
-    gasAfter?: number;
+    chargeNo?: string;
+    furnaceId?: number;
+    gasBefore?: number | null;
+    gasAfter?: number | null;
+    workDate?: Date;
+    shift?: string;
     note?: string;
-    chargeRecordId?: number;
+    chargeRecordId?: number | null;
   }) {
     const existing = await this.prisma.chargeEntry.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Charge not found');
 
-    const gasBefore = data.gasBefore ?? existing.gasBefore;
-    const gasAfter = data.gasAfter ?? existing.gasAfter;
+    if (data.chargeNo && !/^\d{6}-\d{3,}$/.test(data.chargeNo)) {
+      throw new BadRequestException('Invalid charge number format');
+    }
+    if (data.furnaceId) {
+      const furnace = await this.prisma.furnace.findUnique({ where: { id: data.furnaceId } });
+      if (!furnace) throw new BadRequestException('Furnace not found');
+    }
+    if (data.shift && !['day', 'night'].includes(data.shift)) {
+      throw new BadRequestException('Invalid shift');
+    }
+    if (data.workDate && Number.isNaN(data.workDate.getTime())) {
+      throw new BadRequestException('Invalid work date');
+    }
+
+    const hasGasBefore = Object.prototype.hasOwnProperty.call(data, 'gasBefore');
+    const hasGasAfter = Object.prototype.hasOwnProperty.call(data, 'gasAfter');
+    const gasBefore = hasGasBefore ? data.gasBefore : existing.gasBefore;
+    const gasAfter = hasGasAfter ? data.gasAfter : existing.gasAfter;
     const usage = gasAfter != null && gasBefore != null ? gasAfter - gasBefore : null;
 
     const warnings: string[] = [];
@@ -94,31 +114,34 @@ export class ChargeService {
 
     const charge = await this.prisma.chargeEntry.update({
       where: { id },
-      data: { ...data, usage, source: 'manual' },
+      data: {
+        ...data,
+        usage,
+        shift: data.shift ? (data.shift as Shift) : undefined,
+        source: 'manual',
+      },
       include: { furnace: true },
     });
 
     return { ...charge, warnings };
   }
 
-  async bulkUpdate(updates: { id: number; gasBefore?: number; gasAfter?: number; note?: string }[]) {
-    return this.prisma.$transaction(
-      updates.map((update) =>
-        this.prisma.chargeEntry.update({
-          where: { id: update.id },
-          data: {
-            ...(update.gasBefore !== undefined && { gasBefore: update.gasBefore }),
-            ...(update.gasAfter !== undefined && { gasAfter: update.gasAfter }),
-            ...(update.note !== undefined && { note: update.note }),
-            usage: update.gasAfter != null && update.gasBefore != null
-              ? update.gasAfter - update.gasBefore
-              : undefined,
-            source: 'manual',
-          },
-          include: { furnace: true },
-        })
-      )
-    );
+  async bulkUpdate(updates: {
+    id: number;
+    chargeNo?: string;
+    furnaceId?: number;
+    gasBefore?: number | null;
+    gasAfter?: number | null;
+    workDate?: Date;
+    shift?: string;
+    note?: string;
+    chargeRecordId?: number | null;
+  }[]) {
+    const results = [];
+    for (const update of updates) {
+      results.push(await this.update(update.id, update));
+    }
+    return results;
   }
 
   async pasteData(rows: {
@@ -170,7 +193,7 @@ export class ChargeService {
       return d;
     })();
 
-    const periodStart = await this.findStartPoint(furnaceId, workDate, shift, shiftConfig);
+    const periodStart = await this.findStartPoint(furnaceId, workDate, shift, shiftConfig, periodEnd);
 
     const gasBeforeReading = await this.gasReadingService.findClosestReading(furnaceId, periodStart);
     const gasAfterReading = await this.gasReadingService.findClosestReading(furnaceId, periodEnd);
@@ -212,30 +235,22 @@ export class ChargeService {
       endMinute: number;
       crossesMidnight: boolean;
     },
+    periodEnd: Date,
   ): Promise<Date> {
     const shiftStart = new Date(workDate);
     shiftStart.setHours(shiftConfig.startHour, shiftConfig.startMinute, 0, 0);
 
-    const prevCharge = await this.prisma.chargeEntry.findFirst({
+    const previousRecord = await this.prisma.chargeRecord.findFirst({
       where: {
         furnaceId,
         shift: shift as Shift,
-        workDate: { lt: workDate },
+        workEnd: { gte: shiftStart, lt: periodEnd },
       },
-      orderBy: [{ workDate: 'desc' }, { chargeNo: 'desc' }],
+      orderBy: { workEnd: 'desc' },
     });
 
-    if (prevCharge && prevCharge.gasAfter != null) {
-      const prevEnd = new Date(prevCharge.workDate);
-      if (shiftConfig.crossesMidnight) {
-        prevEnd.setDate(prevEnd.getDate() + 1);
-      }
-      prevEnd.setHours(shiftConfig.endHour, shiftConfig.endMinute, 0, 0);
-
-      const tolerance = 2 * 60 * 60 * 1000 // 2 hours
-      if (Math.abs(prevEnd.getTime() - shiftStart.getTime()) <= tolerance) {
-        return prevEnd;
-      }
+    if (previousRecord) {
+      return previousRecord.workEnd;
     }
 
     return shiftStart;

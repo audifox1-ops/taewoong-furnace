@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Param, Body, Query, UploadedFile, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Post, Delete, Param, Body, Query, UploadedFile, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { UploadService } from './upload.service';
@@ -22,6 +22,9 @@ export class UploadController {
   @ApiOperation({ summary: 'Upload multiple PDF scans (admin only)' })
   @UseInterceptors(FilesInterceptor('files', 100, { limits: { fileSize: 50 * 1024 * 1024 } }))
   async uploadMultiplePdfs(@UploadedFiles() files: Express.Multer.File[]) {
+    if (!files?.length) {
+      throw new BadRequestException('업로드할 PDF 파일이 없습니다');
+    }
     const results = [];
     for (const file of files) {
       try {

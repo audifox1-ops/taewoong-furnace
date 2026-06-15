@@ -153,7 +153,7 @@ export class GasReadingService {
     duplicateMode: 'skip' | 'upsert' = 'skip',
   ): Promise<UploadResult> {
     const result: UploadResult = {
-      fileName: file.originalname,
+      fileName: file?.originalname || '',
       batchId: 0,
       furnaceNo: 0,
       furnaceName: '',
@@ -165,6 +165,13 @@ export class GasReadingService {
     };
 
     try {
+      if (!file) {
+        throw new BadRequestException('업로드할 파일이 없습니다');
+      }
+      if (!['skip', 'upsert'].includes(duplicateMode)) {
+        throw new BadRequestException('중복 처리 방식이 올바르지 않습니다');
+      }
+
       const ext = file.originalname.split('.').pop()?.toLowerCase();
       if (!['xlsx', 'xls', 'csv'].includes(ext || '')) {
         result.error = 'Excel/CSV 파일만 지원됩니다';
@@ -231,6 +238,7 @@ export class GasReadingService {
         });
         existing.forEach(r => existingTimestamps.add(r.ts.toISOString()));
       }
+      const seenInFile = new Set<string>();
 
       const batchSize = 1000;
       for (let i = 0; i < data.length; i += batchSize) {
@@ -243,21 +251,28 @@ export class GasReadingService {
             if (isNaN(ts.getTime())) { result.errorCount++; continue; }
 
             const tsKey = ts.toISOString();
-            if (duplicateMode === 'skip' && existingTimestamps.has(tsKey)) {
+            if (seenInFile.has(tsKey) || (duplicateMode === 'skip' && existingTimestamps.has(tsKey))) {
               result.duplicateCount++;
+              continue;
+            }
+            seenInFile.add(tsKey);
+
+            const gasCumulative = this.parseRequiredNumber(row['가스누적지침']);
+            if (gasCumulative == null) {
+              result.errorCount++;
               continue;
             }
 
             readings.push({
               furnaceId: effectiveFurnaceId,
               ts,
-              temp: parseFloat(row['온도']) || null,
-              gas: parseFloat(row['가스']) || null,
-              gasCumulative: parseFloat(row['가스누적지침']) || 0,
-              power: row['전력'] === '-' ? null : parseFloat(row['전력']) || null,
-              powerCumulative: row['전력누적지침'] === '-' ? null : parseFloat(row['전력누적지침']) || null,
-              temp2: parseFloat(row['온도2']) || null,
-              temp3: parseFloat(row['온도3']) || null,
+              temp: this.parseOptionalNumber(row['온도']),
+              gas: this.parseOptionalNumber(row['가스']),
+              gasCumulative,
+              power: this.parseOptionalNumber(row['전력']),
+              powerCumulative: this.parseOptionalNumber(row['전력누적지침']),
+              temp2: this.parseOptionalNumber(row['온도2']),
+              temp3: this.parseOptionalNumber(row['온도3']),
               importBatchId: importBatch.id,
             });
             result.successCount++;
@@ -305,6 +320,18 @@ export class GasReadingService {
       results.push(await this.uploadSingleFile(files[i], fid, duplicateMode));
     }
     return results;
+  }
+
+  private parseOptionalNumber(value: any): number | null {
+    if (value === undefined || value === null || value === '' || value === '-') return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  private parseRequiredNumber(value: any): number | null {
+    if (value === undefined || value === null || value === '' || value === '-') return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
   }
 
   async getUploadHistory() {

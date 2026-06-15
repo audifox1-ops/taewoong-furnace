@@ -131,7 +131,8 @@ export function ChargesPage() {
       const newRows = [...prev]
       const row = { ...newRows[index] }
       if (field === 'gasBefore' || field === 'gasAfter') {
-        row[field] = value === '' ? '' : parseFloat(value) || ''
+        const parsed = Number(value)
+        row[field] = value === '' || Number.isNaN(parsed) ? '' : parsed
         const gb = row.gasBefore === '' ? null : Number(row.gasBefore)
         const ga = row.gasAfter === '' ? null : Number(row.gasAfter)
         row.usage = gb !== null && ga !== null ? ga - gb : null
@@ -234,8 +235,12 @@ export function ChargesPage() {
   const saveAll = async () => {
     const existing = rows.filter(r => r.id).map(r => ({
       id: r.id,
+      chargeNo: r.chargeNo,
+      furnaceId: furnaces?.find((f: any) => f.no === r.furnaceNo)?.id,
       gasBefore: r.gasBefore === '' ? null : r.gasBefore,
       gasAfter: r.gasAfter === '' ? null : r.gasAfter,
+      workDate: r.workDate,
+      shift: r.shift,
       note: r.note,
     }))
     const newOnes: Array<{
@@ -268,6 +273,12 @@ export function ChargesPage() {
     }
 
     try {
+      const validated = validateAllRows(rows)
+      setRows(validated)
+      if (validated.some(r => r._errors?.length)) {
+        toast('error', '검증 오류를 먼저 수정하세요')
+        return
+      }
       if (existing.length > 0) await saveMutation.mutateAsync({ updates: existing })
       for (const r of newOnes) {
         await createMutation.mutateAsync(r)

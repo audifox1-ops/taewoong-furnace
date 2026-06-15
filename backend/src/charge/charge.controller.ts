@@ -44,12 +44,18 @@ export class ChargeController {
     @Param('id') id: string,
     @Body() body: UpdateChargeDto,
   ) {
-    return this.chargeService.update(parseInt(id), body);
+    return this.chargeService.update(parseInt(id), {
+      ...body,
+      workDate: body.workDate ? new Date(body.workDate) : undefined,
+    });
   }
 
   @Post('bulk-update')  @ApiOperation({ summary: 'Bulk update charge entries' })
   async bulkUpdate(@Body() body: BulkUpdateDto) {
-    return this.chargeService.bulkUpdate(body.updates);
+    return this.chargeService.bulkUpdate(body.updates.map(update => ({
+      ...update,
+      workDate: update.workDate ? new Date(update.workDate) : undefined,
+    })));
   }
 
   @Post('paste')  @ApiOperation({ summary: 'Paste data from clipboard (TSV)' })

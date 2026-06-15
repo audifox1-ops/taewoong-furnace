@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GasReadingService } from '../gas-reading/gas-reading.service';
 
@@ -42,6 +42,7 @@ export class AnalysisService {
   }
 
   async getUsageTrend(furnaceId: number, startDate: Date, endDate: Date) {
+    this.assertReasonableRange(startDate, endDate);
     const readings = await this.gasReadingService.findByFurnaceAndTimeRange(furnaceId, startDate, endDate);
     
     const dailyData: Record<string, { min: number; max: number; readings: number }> = {};
@@ -66,6 +67,7 @@ export class AnalysisService {
   }
 
   async getTemperatureTrend(furnaceId: number, startDate: Date, endDate: Date) {
+    this.assertReasonableRange(startDate, endDate);
     const readings = await this.gasReadingService.findByFurnaceAndTimeRange(furnaceId, startDate, endDate);
     
     const hourlyData: Record<string, { temps: number[] }> = {};
@@ -171,5 +173,16 @@ export class AnalysisService {
         weightKg: c.chargeRecord!.weightKg!,
         unitRate: c.usage! / c.chargeRecord!.weightKg!,
       }));
+  }
+
+  private assertReasonableRange(startDate: Date, endDate: Date) {
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || startDate > endDate) {
+      throw new BadRequestException('조회 기간이 올바르지 않습니다');
+    }
+    const maxDays = 93;
+    const rangeDays = (endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000);
+    if (rangeDays > maxDays) {
+      throw new BadRequestException(`시계열 분석 조회 기간은 최대 ${maxDays}일입니다`);
+    }
   }
 }

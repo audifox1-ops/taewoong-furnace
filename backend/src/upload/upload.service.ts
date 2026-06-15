@@ -33,11 +33,17 @@ export class UploadService {
   }
 
   async uploadPdf(file: Express.Multer.File) {
-    await this.ensureBucket();
-
+    if (!file) {
+      throw new BadRequestException('업로드할 PDF 파일이 없습니다');
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      throw new BadRequestException('PDF 파일은 50MB 이하만 업로드할 수 있습니다');
+    }
     if (!file.originalname.toLowerCase().endsWith('.pdf')) {
       throw new BadRequestException('Only PDF files are allowed');
     }
+
+    await this.ensureBucket();
 
     const fileName = `${Date.now()}-${file.originalname}`;
 
@@ -104,6 +110,23 @@ export class UploadService {
     weightKg?: number;
     note?: string;
   }) {
+    const scan = await this.prisma.chargeScan.findUnique({ where: { id: data.chargeScanId } });
+    if (!scan) throw new NotFoundException('Charge scan not found');
+    if (data.pageIndex < 1 || (scan.pageCount && data.pageIndex > scan.pageCount)) {
+      throw new BadRequestException('페이지 번호가 올바르지 않습니다');
+    }
+    const furnace = await this.prisma.furnace.findUnique({ where: { id: data.furnaceId } });
+    if (!furnace) throw new BadRequestException('Furnace not found');
+    if (!['day', 'night'].includes(data.shift)) {
+      throw new BadRequestException('Invalid shift');
+    }
+    if (Number.isNaN(data.workDate.getTime()) || Number.isNaN(data.workEnd.getTime())) {
+      throw new BadRequestException('작업일 또는 종료 시간이 올바르지 않습니다');
+    }
+    if (data.weightKg != null && data.weightKg <= 0) {
+      throw new BadRequestException('중량은 0보다 커야 합니다');
+    }
+
     return this.prisma.chargeRecord.create({
       data: {
         ...data,

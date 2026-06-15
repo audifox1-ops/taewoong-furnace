@@ -105,20 +105,21 @@ export function GasUploadPage() {
       setQueue(prev => prev.map((q, j) => j === idx ? { ...q, status: 'uploading' } : q))
 
       try {
-        if (!item.furnaceNo) {
+        const furnace = furnaces?.find((f: any) => f.no === item.furnaceNo)
+        if (!furnace) {
           throw new Error('가열로 번호를 선택해 주세요')
         }
 
         const formData = new FormData()
-        formData.append('files', item.file)
-        formData.append('furnaceId', String(item.furnaceNo))
+        formData.append('file', item.file)
+        formData.append('furnaceId', String(furnace.id))
         formData.append('duplicateMode', duplicateMode)
 
-        const res = await api.post('/gas-readings/upload-batch', formData, {
+        const res = await api.post('/gas-readings/upload', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         })
 
-        const result = res.data[0]
+        const result = res.data
         setQueue(prev => prev.map((q, j) => j === idx ? {
           ...q,
           status: result.status === 'completed' ? 'completed' : 'error',

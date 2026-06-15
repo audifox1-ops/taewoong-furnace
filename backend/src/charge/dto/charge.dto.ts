@@ -46,15 +46,36 @@ export class CreateChargeDto {
 }
 
 export class UpdateChargeDto {
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: '260601-001' })
+  @IsOptional()
+  @IsString()
+  chargeNo?: string;
+
+  @ApiPropertyOptional({ example: 1 })
   @IsOptional()
   @IsNumber()
-  gasBefore?: number;
+  @Min(1)
+  furnaceId?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsNumber()
-  gasAfter?: number;
+  gasBefore?: number | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  gasAfter?: number | null;
+
+  @ApiPropertyOptional({ example: '2026-06-01' })
+  @IsOptional()
+  @IsDateString()
+  workDate?: string;
+
+  @ApiPropertyOptional({ enum: ['day', 'night'] })
+  @IsOptional()
+  @IsEnum(['day', 'night'])
+  shift?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -64,7 +85,7 @@ export class UpdateChargeDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsNumber()
-  chargeRecordId?: number;
+  chargeRecordId?: number | null;
 }
 
 export class PasteChargeRowDto {
@@ -122,5 +143,5 @@ export class AutoFillDto {
 export class BulkUpdateDto {
   @ApiProperty({ type: [UpdateChargeDto] })
   @IsOptional()
-  updates: { id: number; gasBefore?: number; gasAfter?: number; note?: string }[];
+  updates: (UpdateChargeDto & { id: number })[];
 }
