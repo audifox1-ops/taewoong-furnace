@@ -9,7 +9,18 @@ async function bootstrap() {
   
   app.setGlobalPrefix('api');
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        'http://localhost:5173',
+        'https://taewoong-furnace.vercel.app',
+        'https://twmakeppt.vercel.app'
+      ];
+      if (!origin || allowedOrigins.includes(origin) || process.env.CORS_ORIGIN?.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   });
   
