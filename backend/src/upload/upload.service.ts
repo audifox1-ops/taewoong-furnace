@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
+import { Shift } from '@prisma/client';
 import * as Minio from 'minio';
 import { PDFDocument } from 'pdf-lib';
 
@@ -90,7 +91,10 @@ export class UploadService {
     note?: string;
   }) {
     return this.prisma.chargeRecord.create({
-      data,
+      data: {
+        ...data,
+        shift: data.shift as Shift,
+      },
       include: { chargeScan: true, furnace: true },
     });
   }

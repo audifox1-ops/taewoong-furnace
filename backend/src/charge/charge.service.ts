@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GasReadingService } from '../gas-reading/gas-reading.service';
+import { Shift, ChargeSource } from '@prisma/client';
 
 @Injectable()
 export class ChargeService {
@@ -12,12 +13,12 @@ export class ChargeService {
   async findAll(furnaceId?: number, startDate?: string, endDate?: string, shift?: string) {
     const where: {
       furnaceId?: number;
-      shift?: string;
+      shift?: Shift;
       workDate?: { gte?: Date; lte?: Date };
     } = {};
 
     if (furnaceId) where.furnaceId = furnaceId;
-    if (shift) where.shift = shift;
+    if (shift) where.shift = shift as Shift;
     if (startDate || endDate) {
       where.workDate = {};
       if (startDate) where.workDate.gte = new Date(startDate);
@@ -61,7 +62,12 @@ export class ChargeService {
     }
 
     const charge = await this.prisma.chargeEntry.create({
-      data: { ...data, usage },
+      data: {
+        ...data,
+        usage,
+        shift: data.shift as Shift,
+        source: (data.source as ChargeSource) || 'manual',
+      },
       include: { furnace: true },
     });
 
@@ -213,7 +219,7 @@ export class ChargeService {
     const prevCharge = await this.prisma.chargeEntry.findFirst({
       where: {
         furnaceId,
-        shift,
+        shift: shift as Shift,
         workDate: { lt: workDate },
       },
       orderBy: [{ workDate: 'desc' }, { chargeNo: 'desc' }],
@@ -445,7 +451,10 @@ export class ChargeService {
 
     const updated = await this.prisma.chargeRecord.update({
       where: { id },
-      data,
+      data: {
+        ...data,
+        shift: data.shift ? (data.shift as Shift) : undefined,
+      },
       include: { chargeScan: true, furnace: true },
     });
 

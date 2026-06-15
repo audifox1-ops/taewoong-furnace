@@ -3,15 +3,38 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  admin
+  user
+}
+
+enum Shift {
+  day
+  night
+}
+
+enum ChargeSource {
+  auto
+  manual
+  paste
+  upload
+}
+
+enum ChargeScanStatus {
+  uploaded
+  processed
+  error
 }
 
 model User {
   id           Int      @id @default(autoincrement())
   username     String   @unique
   passwordHash String
-  role         String   @default("user") // "admin" | "user"
+  role         UserRole @default(user)
   createdAt    DateTime @default(now())
 }
 
@@ -54,8 +77,8 @@ model ChargeEntry {
   gasAfter        Float?
   usage           Float?
   workDate        DateTime
-  shift           String       // "day" | "night"
-  source          String       @default("manual") // "auto" | "manual" | "paste" | "upload"
+  shift           Shift
+  source          ChargeSource @default(manual)
   chargeRecordId  Int?
   chargeRecord    ChargeRecord? @relation(fields: [chargeRecordId], references: [id], onDelete: SetNull)
   note            String?
@@ -67,12 +90,12 @@ model ChargeEntry {
 }
 
 model ChargeScan {
-  id               Int           @id @default(autoincrement())
+  id               Int             @id @default(autoincrement())
   fileUrl          String
   originalFileName String
-  uploadedAt       DateTime      @default(now())
+  uploadedAt       DateTime        @default(now())
   pageCount        Int?
-  status           String        @default("uploaded") // "uploaded" | "processed" | "error"
+  status           ChargeScanStatus @default(uploaded)
 
   chargeRecords    ChargeRecord[]
 
@@ -87,7 +110,7 @@ model ChargeRecord {
   furnaceId    Int
   furnace      Furnace     @relation(fields: [furnaceId], references: [id], onDelete: Cascade)
   workDate     DateTime
-  shift        String       // "day" | "night"
+  shift        Shift
   workEnd      DateTime
   workStart    DateTime?
   material     String?

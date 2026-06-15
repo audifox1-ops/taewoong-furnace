@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, UserRole, Shift } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -14,7 +14,7 @@ async function main() {
     create: {
       username: 'admin',
       passwordHash: adminPasswordHash,
-      role: 'admin',
+      role: UserRole.admin,
     },
   });
 
@@ -26,7 +26,7 @@ async function main() {
     create: {
       username: 'user',
       passwordHash: userPasswordHash,
-      role: 'user',
+      role: UserRole.user,
     },
   });
 
@@ -79,10 +79,10 @@ async function main() {
 
   // Create sample charge entries
   const charges = [
-    { chargeNo: '260610-001', furnaceNo: 1, shift: 'day', workDate: new Date('2026-06-10') },
-    { chargeNo: '260610-002', furnaceNo: 1, shift: 'night', workDate: new Date('2026-06-10') },
-    { chargeNo: '260611-001', furnaceNo: 1, shift: 'day', workDate: new Date('2026-06-11') },
-    { chargeNo: '260611-002', furnaceNo: 1, shift: 'night', workDate: new Date('2026-06-11') },
+    { chargeNo: '260610-001', furnaceNo: 1, shift: Shift.day, workDate: new Date('2026-06-10') },
+    { chargeNo: '260610-002', furnaceNo: 1, shift: Shift.night, workDate: new Date('2026-06-10') },
+    { chargeNo: '260611-001', furnaceNo: 1, shift: Shift.day, workDate: new Date('2026-06-11') },
+    { chargeNo: '260611-002', furnaceNo: 1, shift: Shift.night, workDate: new Date('2026-06-11') },
   ];
 
   for (const charge of charges) {
