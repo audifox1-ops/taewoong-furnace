@@ -27,7 +27,9 @@ export function LoginPage() {
       }
       navigate('/')
     } catch (err: any) {
-      setError(err.response?.data?.message || (isRegister ? '회원가입에 실패했습니다' : '로그인에 실패했습니다'))
+      const msg = err.response?.data?.message
+      const errorMessage = Array.isArray(msg) ? msg.join(', ') : msg
+      setError(errorMessage || (isRegister ? '회원가입에 실패했습니다' : '로그인에 실패했습니다'))
     } finally {
       setIsSubmitting(false)
     }
