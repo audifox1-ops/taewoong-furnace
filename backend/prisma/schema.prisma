@@ -81,6 +81,7 @@ model GasReading {
 
   @@unique([furnaceId, ts])
   @@index([furnaceId, ts])
+  @@index([importBatchId])
   @@schema("taewoong_furnace")
 }
 
@@ -101,7 +102,9 @@ model ChargeEntry {
 
   @@index([furnaceId])
   @@index([workDate])
+  @@index([shift])
   @@index([furnaceId, workDate])
+  @@index([furnaceId, shift])
   @@index([chargeRecordId])
   @@unique([chargeNo])
   @@schema("taewoong_furnace")
@@ -141,6 +144,7 @@ model ChargeRecord {
   @@index([chargeScanId])
   @@index([furnaceId])
   @@index([workDate])
+  @@index([furnaceId, shift, workEnd])
   @@schema("taewoong_furnace")
 }
 

@@ -291,7 +291,7 @@ export class GasReadingService {
               });
             }
           } else {
-            await this.prisma.gasReading.createMany({ data: readings });
+            await this.prisma.gasReading.createMany({ data: readings, skipDuplicates: true });
           }
         }
       }
@@ -314,11 +314,9 @@ export class GasReadingService {
     furnaceIds?: number[],
     duplicateMode: 'skip' | 'upsert' = 'skip',
   ): Promise<UploadResult[]> {
-    const results: UploadResult[] = [];
-    for (let i = 0; i < files.length; i++) {
-      const fid = furnaceIds?.[i];
-      results.push(await this.uploadSingleFile(files[i], fid, duplicateMode));
-    }
+    const results = await Promise.all(
+      files.map((file, i) => this.uploadSingleFile(file, furnaceIds?.[i], duplicateMode))
+    );
     return results;
   }
 
@@ -449,10 +447,9 @@ export class GasReadingService {
   }
 
   async applyFurnaceFixes(batchIds: number[], currentFurnaceNo = 1): Promise<FurnaceFixResult[]> {
-    const results: FurnaceFixResult[] = [];
-    for (const batchId of batchIds) {
-      results.push(await this.applyFurnaceFix(batchId, currentFurnaceNo));
-    }
+    const results = await Promise.all(
+      batchIds.map(batchId => this.applyFurnaceFix(batchId, currentFurnaceNo))
+    );
     return results;
   }
 

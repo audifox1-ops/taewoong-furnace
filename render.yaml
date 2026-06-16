@@ -17,5 +17,5 @@ services:
         value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvdHRtZ2NlZGlhYWRkeG5sdmhxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Njc0NjA3OCwiZXhwIjoyMDkyMzIyMDc4fQ.sYlSasiCdED0ZsDul7S_1T-cnZ3URTrdkyVZz1yXuNc"
       - key: SUPABASE_STORAGE_BUCKET
         value: "taewoong-furnace"
-      - key: CORS_ORIGIN
+      - key: CORS_ORIGINS
         value: "https://twmakeppt.vercel.app,https://taewoong-furnace.vercel.app"

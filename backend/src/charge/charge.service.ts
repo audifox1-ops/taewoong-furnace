@@ -137,10 +137,60 @@ export class ChargeService {
     note?: string;
     chargeRecordId?: number | null;
   }[]) {
-    const results = [];
-    for (const update of updates) {
-      results.push(await this.update(update.id, update));
-    }
+    const results: any[] = [];
+    await this.prisma.$transaction(async (tx) => {
+      for (const update of updates) {
+        const existing = await tx.chargeEntry.findUnique({ where: { id: update.id } });
+        if (!existing) {
+          results.push({ id: update.id, error: 'Charge not found' });
+          continue;
+        }
+
+        if (update.chargeNo && !/^\d{6}-\d{3,}$/.test(update.chargeNo)) {
+          results.push({ id: update.id, error: 'Invalid charge number format' });
+          continue;
+        }
+        if (update.furnaceId) {
+          const furnace = await tx.furnace.findUnique({ where: { id: update.furnaceId } });
+          if (!furnace) {
+            results.push({ id: update.id, error: 'Furnace not found' });
+            continue;
+          }
+        }
+        if (update.shift && !['day', 'night'].includes(update.shift)) {
+          results.push({ id: update.id, error: 'Invalid shift' });
+          continue;
+        }
+        if (update.workDate && Number.isNaN(update.workDate.getTime())) {
+          results.push({ id: update.id, error: 'Invalid work date' });
+          continue;
+        }
+
+        const hasGasBefore = Object.prototype.hasOwnProperty.call(update, 'gasBefore');
+        const hasGasAfter = Object.prototype.hasOwnProperty.call(update, 'gasAfter');
+        const gasBefore = hasGasBefore ? update.gasBefore : existing.gasBefore;
+        const gasAfter = hasGasAfter ? update.gasAfter : existing.gasAfter;
+        const usage = gasAfter != null && gasBefore != null ? gasAfter - gasBefore : null;
+
+        const warnings: string[] = [];
+        if (usage !== null && usage < 0) {
+          warnings.push('음수 사용량: 적산계 리셋/롤오버 가능성');
+        }
+
+        const charge = await tx.chargeEntry.update({
+          where: { id: update.id },
+          data: {
+            ...update,
+            usage,
+            shift: update.shift ? (update.shift as Shift) : undefined,
+            source: 'manual',
+          },
+          include: { furnace: true },
+        });
+
+        results.push({ ...charge, warnings });
+      }
+    });
     return results;
   }
 
@@ -151,34 +201,50 @@ export class ChargeService {
     gasAfter?: number;
     note?: string;
   }[]) {
-    const results = [];
+    const results: any[] = [];
 
-    for (const row of rows) {
-      const furnace = await this.prisma.furnace.findUnique({ where: { no: row.furnaceNo } });
-      if (!furnace) {
-        results.push({ ...row, error: `Furnace ${row.furnaceNo} not found` });
-        continue;
+    await this.prisma.$transaction(async (tx) => {
+      for (const row of rows) {
+        const furnace = await tx.furnace.findUnique({ where: { no: row.furnaceNo } });
+        if (!furnace) {
+          results.push({ ...row, error: `Furnace ${row.furnaceNo} not found` });
+          continue;
+        }
+
+        const workDate = this.extractDateFromChargeNo(row.chargeNo);
+        const shift = this.determineShift(workDate);
+
+        try {
+          const usage = row.gasAfter != null && row.gasBefore != null
+            ? row.gasAfter - row.gasBefore
+            : null;
+
+          const warnings: string[] = [];
+          if (usage !== null && usage < 0) {
+            warnings.push('음수 사용량: 적산계 리셋/롤오버 가능성');
+          }
+
+          const charge = await tx.chargeEntry.create({
+            data: {
+              chargeNo: row.chargeNo,
+              furnaceId: furnace.id,
+              gasBefore: row.gasBefore,
+              gasAfter: row.gasAfter,
+              usage,
+              workDate,
+              shift: shift as Shift,
+              source: 'paste',
+              note: row.note,
+            },
+            include: { furnace: true },
+          });
+
+          results.push({ ...charge, warnings });
+        } catch (error: any) {
+          results.push({ ...row, error: error.message });
+        }
       }
-
-      const workDate = this.extractDateFromChargeNo(row.chargeNo);
-      const shift = this.determineShift(workDate);
-
-      try {
-        const charge = await this.create({
-          chargeNo: row.chargeNo,
-          furnaceId: furnace.id,
-          gasBefore: row.gasBefore,
-          gasAfter: row.gasAfter,
-          workDate,
-          shift,
-          source: 'paste',
-          note: row.note,
-        });
-        results.push(charge);
-      } catch (error: any) {
-        results.push({ ...row, error: error.message });
-      }
-    }
+    });
 
     return results;
   }
@@ -440,22 +506,75 @@ export class ChargeService {
       orderBy: [{ workDate: 'asc' }, { pageIndex: 'asc' }],
     });
 
-    const batchSize = 50;
     const results: { recordId: number; chargeId?: number; status: string; error?: string }[] = [];
     
+    const batchSize = 50;
     for (let i = 0; i < records.length; i += batchSize) {
       const batch = records.slice(i, i + batchSize);
-      const batchResults = await Promise.allSettled(
-        batch.map((record) => this.rematchChargeRecord(record.id))
-      );
-      
-      batchResults.forEach((result, index) => {
-        const record = batch[index];
-        if (result.status === 'fulfilled') {
-          results.push({ recordId: record.id, chargeId: result.value.id, status: 'matched' });
-        } else {
-          results.push({ recordId: record.id, status: 'failed', error: result.reason?.message || 'Unknown error' });
-        }
+      await this.prisma.$transaction(async (tx) => {
+        const batchResults = await Promise.allSettled(
+          batch.map(async (record) => {
+            const existingCharge = await tx.chargeEntry.findFirst({
+              where: { chargeRecordId: record.id },
+            });
+
+            const autoFill = await this.autoFillUsage(
+              record.furnaceId,
+              record.workDate,
+              record.shift,
+              record.workEnd,
+            );
+
+            if (existingCharge) {
+              if (autoFill) {
+                const usage = autoFill.gasAfter != null && autoFill.gasBefore != null
+                  ? autoFill.gasAfter - autoFill.gasBefore
+                  : null;
+                const updated = await tx.chargeEntry.update({
+                  where: { id: existingCharge.id },
+                  data: {
+                    gasBefore: autoFill.gasBefore,
+                    gasAfter: autoFill.gasAfter,
+                    usage,
+                  },
+                  include: { furnace: true },
+                });
+                return updated;
+              }
+              return existingCharge;
+            }
+
+            const chargeNo = await this.generateChargeNoForTx(tx, record.workDate, record.furnaceId);
+            const usage = autoFill?.gasAfter != null && autoFill?.gasBefore != null
+              ? autoFill.gasAfter - autoFill.gasBefore
+              : null;
+
+            return tx.chargeEntry.create({
+              data: {
+                chargeNo,
+                furnaceId: record.furnaceId,
+                gasBefore: autoFill?.gasBefore,
+                gasAfter: autoFill?.gasAfter,
+                usage,
+                workDate: record.workDate,
+                shift: record.shift as Shift,
+                source: 'auto',
+                chargeRecordId: record.id,
+                note: record.note || undefined,
+              },
+              include: { furnace: true },
+            });
+          })
+        );
+        
+        batchResults.forEach((result, index) => {
+          const record = batch[index];
+          if (result.status === 'fulfilled') {
+            results.push({ recordId: record.id, chargeId: result.value.id, status: 'matched' });
+          } else {
+            results.push({ recordId: record.id, status: 'failed', error: result.reason?.message || 'Unknown error' });
+          }
+        });
       });
     }
     
@@ -494,6 +613,26 @@ export class ChargeService {
 
     await this.rematchChargeRecord(id);
     return updated;
+  }
+
+  private async generateChargeNoForTx(tx: any, workDate: Date, furnaceId: number): Promise<string> {
+    const yy = String(workDate.getFullYear()).slice(-2);
+    const mm = String(workDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(workDate.getDate()).padStart(2, '0');
+    const datePrefix = `${yy}${mm}${dd}`;
+
+    const lastEntry = await tx.chargeEntry.findFirst({
+      where: { chargeNo: { startsWith: datePrefix } },
+      orderBy: { chargeNo: 'desc' },
+    });
+
+    let seq = 1;
+    if (lastEntry) {
+      const lastSeq = parseInt(lastEntry.chargeNo.split('-')[1], 10);
+      if (!isNaN(lastSeq)) seq = lastSeq + 1;
+    }
+
+    return `${datePrefix}-${String(seq).padStart(3, '0')}`;
   }
 
   private async generateChargeNo(workDate: Date, furnaceId: number): Promise<string> {
