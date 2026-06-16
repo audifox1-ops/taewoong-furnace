@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readdirSync, rmSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync } from 'fs';
 import path from 'path';
 import { spawnSync } from 'child_process';
 
@@ -10,7 +10,11 @@ const DEFAULT_DATABASE = 'taewoong_furnace';
 let bootstrapPromise: Promise<void> | null = null;
 
 function getDatabaseDir() {
-  return path.resolve(process.cwd(), '..', 'work', 'embedded-postgres-54321');
+  const baseDir = path.resolve(process.cwd(), '..', 'work', 'embedded-postgres-54321');
+  if (!existsSync(baseDir)) {
+    mkdirSync(baseDir, { recursive: true });
+  }
+  return mkdtempSync(path.join(baseDir, 'cluster-'));
 }
 
 function setPrismaEnv() {
@@ -43,25 +47,12 @@ async function ensureEmbeddedPostgresRunning() {
     await pg.start();
   };
 
-  if (existsSync(databaseDir)) {
-    const entries = readdirSync(databaseDir);
-    const hasInitializedCluster = entries.includes('PG_VERSION');
-    if (!hasInitializedCluster && entries.length > 0) {
-      rmSync(databaseDir, { recursive: true, force: true });
-    }
-  }
-  if (!existsSync(databaseDir)) {
-    mkdirSync(databaseDir, { recursive: true });
-  }
-
   try {
     await initialiseAndStart();
   } catch (error) {
     if (isPortInUseError(error)) {
       return;
     }
-    rmSync(databaseDir, { recursive: true, force: true });
-    mkdirSync(databaseDir, { recursive: true });
     try {
       await initialiseAndStart();
     } catch (retryError) {
