@@ -1,8 +1,9 @@
-import { existsSync, mkdirSync, mkdtempSync } from 'fs';
+import { existsSync, mkdirSync } from 'fs';
 import path from 'path';
 import { spawnSync } from 'child_process';
+import { randomUUID } from 'crypto';
 
-const DEFAULT_PORT = 54321;
+const DEFAULT_PORT = 55432;
 const DEFAULT_USER = 'postgres';
 const DEFAULT_PASSWORD = 'password';
 const DEFAULT_DATABASE = 'taewoong_furnace';
@@ -14,7 +15,7 @@ function getDatabaseDir() {
   if (!existsSync(baseDir)) {
     mkdirSync(baseDir, { recursive: true });
   }
-  return mkdtempSync(path.join(baseDir, 'cluster-'));
+  return path.join(baseDir, `cluster-${randomUUID()}`);
 }
 
 function setPrismaEnv() {
