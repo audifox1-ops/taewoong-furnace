@@ -62,7 +62,7 @@ export class GasReadingService {
     let periodStart: string | null = null;
     let periodEnd: string | null = null;
 
-    const furnaceMatch = normalizedBase.match(/가열로?\s*(\d+)\s*호기?/i);
+    const furnaceMatch = normalizedBase.match(/(?:가열\s*로?)?\s*(\d+)\s*호(?:기)?/i);
     if (furnaceMatch) {
       furnaceNo = parseInt(furnaceMatch[1]);
       furnaceName = `가열${furnaceNo}호`;

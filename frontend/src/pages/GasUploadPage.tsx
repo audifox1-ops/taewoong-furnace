@@ -24,7 +24,7 @@ function parseFileName(name: string) {
   let periodStart: string | null = null
   let periodEnd: string | null = null
 
-  const furnaceMatch = normalizedBase.match(/가열로?\s*(\d+)\s*호기?/i)
+  const furnaceMatch = normalizedBase.match(/(?:가열\s*로?)?\s*(\d+)\s*호(?:기)?/i)
   if (furnaceMatch) furnaceNo = parseInt(furnaceMatch[1])
 
   const dateMatch = normalizedBase.match(/\((\d{4}-\d{2}-\d{2})\s*[~\-]\s*(\d{4}-\d{2}-\d{2})\)/)
@@ -172,7 +172,7 @@ export function GasUploadPage() {
         <p className="font-medium text-gray-700">여러 Excel/CSV 파일을 드래그 앤 드롭</p>
         <p className="text-sm text-gray-500 mt-1">또는 클릭하여 파일 선택 (다중 선택 가능)</p>
         <p className="text-xs text-gray-400 mt-2">
-          파일명에 호기/기간 포함 시 자동 추출: 가열로19호기_가스_(2026-06-01 ~ 2026-06-30).xlsx
+          파일명에 호기/기간 포함 시 자동 추출: 17호기_가스_(2026-06-01 ~ 2026-06-30).xlsx
         </p>
       </div>
 

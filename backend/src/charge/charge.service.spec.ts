@@ -2,11 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ChargeService } from './charge.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { GasReadingService } from '../gas-reading/gas-reading.service';
+import { SettingsService } from '../settings/settings.service';
 
 describe('ChargeService', () => {
   let service: ChargeService;
   let prismaMock: any;
   let gasReadingServiceMock: any;
+  let settingsServiceMock: any;
 
   beforeEach(async () => {
     prismaMock = {
@@ -31,11 +33,21 @@ describe('ChargeService', () => {
       findClosestReading: jest.fn(),
     };
 
+    settingsServiceMock = {
+      getShiftConfig: jest.fn().mockResolvedValue({
+        dayStart: '08:00',
+        dayEnd: '19:30',
+        nightStart: '20:00',
+        nightEnd: '07:00',
+      }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ChargeService,
         { provide: PrismaService, useValue: prismaMock },
         { provide: GasReadingService, useValue: gasReadingServiceMock },
+        { provide: SettingsService, useValue: settingsServiceMock },
       ],
     }).compile();
 
@@ -194,8 +206,8 @@ describe('ChargeService', () => {
   });
 
   describe('getShiftConfig', () => {
-    it('should return day shift config', () => {
-      const config = (service as any).getShiftConfig('day');
+    it('should return day shift config', async () => {
+      const config = await (service as any).getShiftConfig('day');
       expect(config).toEqual({
         startHour: 8,
         startMinute: 0,
@@ -205,8 +217,8 @@ describe('ChargeService', () => {
       });
     });
 
-    it('should return night shift config', () => {
-      const config = (service as any).getShiftConfig('night');
+    it('should return night shift config', async () => {
+      const config = await (service as any).getShiftConfig('night');
       expect(config).toEqual({
         startHour: 20,
         startMinute: 0,
@@ -216,8 +228,8 @@ describe('ChargeService', () => {
       });
     });
 
-    it('should default to day config for unknown shift', () => {
-      const config = (service as any).getShiftConfig('unknown');
+    it('should default to day config for unknown shift', async () => {
+      const config = await (service as any).getShiftConfig('unknown');
       expect(config.crossesMidnight).toBe(false);
     });
   });

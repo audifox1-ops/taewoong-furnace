@@ -44,7 +44,7 @@ function normalizeDigits(value: string) {
 
 function parseFurnaceNo(fileName: string) {
   const base = normalizeDigits(fileName.replace(/\.(xlsx|xls|csv)$/i, ''));
-  const match = base.match(/가열로?\s*(\d+)\s*호기?/i);
+  const match = base.match(/(?:가열\s*로?)?\s*(\d+)\s*호(?:기)?/i);
   return match ? Number.parseInt(match[1], 10) : null;
 }
 
