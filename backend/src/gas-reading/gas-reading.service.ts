@@ -336,7 +336,24 @@ export class GasReadingService {
     return this.prisma.importBatch.findMany({
       orderBy: { createdAt: 'desc' },
       take: 50,
-      include: { furnace: true },
+      select: {
+        id: true,
+        fileName: true,
+        furnaceId: true,
+        periodStart: true,
+        periodEnd: true,
+        rowCount: true,
+        successCount: true,
+        errorCount: true,
+        createdAt: true,
+        furnace: {
+          select: {
+            id: true,
+            no: true,
+            name: true,
+          },
+        },
+      },
     });
   }
 

@@ -55,6 +55,7 @@ export function GasUploadPage() {
   const { data: uploadHistory } = useQuery({
     queryKey: ['upload-history'],
     queryFn: () => api.get('/gas-readings/upload-history').then(r => Array.isArray(r.data) ? r.data : []),
+    staleTime: 30_000,
   })
 
   const { data: furnaces } = useQuery({
@@ -64,6 +65,24 @@ export function GasUploadPage() {
 
   const deleteUploadHistoryMutation = useMutation({
     mutationFn: (batchId: number) => api.delete(`/gas-readings/upload-history/${batchId}`).then(r => r.data),
+    onMutate: async (batchId) => {
+      await queryClient.cancelQueries({ queryKey: ['upload-history'] })
+      const previousHistory = queryClient.getQueryData(['upload-history'])
+      queryClient.setQueryData(['upload-history'], (prev: any) => {
+        const current = Array.isArray(prev) ? prev : []
+        return current.filter((historyItem: any) => historyItem.id !== batchId)
+      })
+      return { previousHistory }
+    },
+    onError: (_error, _batchId, context) => {
+      if (context?.previousHistory) {
+        queryClient.setQueryData(['upload-history'], context.previousHistory)
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['upload-history'] })
+      queryClient.invalidateQueries({ queryKey: ['gas-readings'] })
+    },
     onSuccess: (_result, batchId) => {
       queryClient.setQueryData(['upload-history'], (prev: any) => {
         const current = Array.isArray(prev) ? prev : []
@@ -188,12 +207,16 @@ export function GasUploadPage() {
   const completedCount = queue.filter(q => q.status === 'completed').length
   const errorCount = queue.filter(q => q.status === 'error').length
   const resolveHistoryFurnaceName = (historyItem: any) => {
+    if (historyItem.furnace?.name) {
+      return historyItem.furnace.name
+    }
+
     const parsed = parseFileName(historyItem.fileName || '')
     if (parsed.furnaceNo) {
-      const furnace = furnaces?.find((f: any) => f.no === parsed.furnaceNo)
-      return furnace?.name || `가열${parsed.furnaceNo}호`
+      return `가열${parsed.furnaceNo}호`
     }
-    return historyItem.furnace?.name || '-'
+
+    return '-'
   }
 
   return (
