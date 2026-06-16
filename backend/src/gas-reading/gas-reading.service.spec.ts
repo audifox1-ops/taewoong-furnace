@@ -11,27 +11,25 @@ describe('GasReadingService', () => {
       },
       importBatch: {
         create: jest.fn(),
-        findUnique: jest.fn(),
+        findFirst: jest.fn(),
+        findMany: jest.fn(),
         update: jest.fn(),
-        delete: jest.fn(),
       },
       gasReading: {
         findMany: jest.fn(),
         createMany: jest.fn(),
-        deleteMany: jest.fn(),
         upsert: jest.fn(),
       },
-      $transaction: jest.fn(async (operations: any[]) => Promise.all(operations)),
     };
 
     service = new GasReadingService(prismaMock);
   });
 
-  it('parses furnace numbers from file names', () => {
-    const result = service.parseFileName('가열17호기_(2026-06-01 ~ 2026-06-30).xlsx');
+  it('parses furnace numbers written with full-width digits', () => {
+    const result = service.parseFileName('가열로１９호기_가스(2026-06-01 ~ 2026-06-30).xlsx');
 
-    expect(result.furnaceNo).toBe(17);
-    expect(result.furnaceName).toBe('가열17호');
+    expect(result.furnaceNo).toBe(19);
+    expect(result.furnaceName).toBe('가열19호');
     expect(result.periodStart).toBe('2026-06-01');
     expect(result.periodEnd).toBe('2026-06-30');
   });
@@ -43,35 +41,21 @@ describe('GasReadingService', () => {
     } as Express.Multer.File);
 
     expect(result.status).toBe('error');
+    expect(result.error).toContain('가열로 번호를 확인할 수 없습니다');
     expect(prismaMock.furnace.findUnique).not.toHaveBeenCalled();
   });
 
-  it('deletes upload history together with linked gas readings', async () => {
-    prismaMock.importBatch.findUnique.mockResolvedValue({
-      id: 7,
-      fileName: '가열17호기_(2026-06-01 ~ 2026-06-30).xlsx',
-    });
-    prismaMock.gasReading.deleteMany.mockResolvedValue({ count: 12 });
-    prismaMock.importBatch.delete.mockResolvedValue({ id: 7 });
+  it('hides upload history without updating gas readings', async () => {
+    prismaMock.importBatch.findFirst.mockResolvedValue({ id: 12 });
+    prismaMock.importBatch.update.mockResolvedValue({ id: 12 });
+    prismaMock.gasReading.updateMany = jest.fn();
 
-    const result = await service.deleteUploadHistory(7);
+    await expect(service.deleteUploadHistory(12)).resolves.toEqual({ deleted: true });
 
-    expect(result).toEqual({
-      deleted: true,
-      batchId: 7,
-      fileName: '가열17호기_(2026-06-01 ~ 2026-06-30).xlsx',
-      deletedReadings: 12,
+    expect(prismaMock.importBatch.update).toHaveBeenCalledWith({
+      where: { id: 12 },
+      data: { hiddenAt: expect.any(Date) },
     });
-    expect(prismaMock.importBatch.findUnique).toHaveBeenCalledWith({
-      where: { id: 7 },
-      select: { id: true, fileName: true },
-    });
-    expect(prismaMock.gasReading.deleteMany).toHaveBeenCalledWith({
-      where: { importBatchId: 7 },
-    });
-    expect(prismaMock.importBatch.delete).toHaveBeenCalledWith({
-      where: { id: 7 },
-    });
-    expect(prismaMock.$transaction).toHaveBeenCalledTimes(1);
+    expect(prismaMock.gasReading.updateMany).not.toHaveBeenCalled();
   });
 });

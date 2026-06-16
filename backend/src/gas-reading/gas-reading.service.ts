@@ -334,6 +334,7 @@ export class GasReadingService {
 
   async getUploadHistory() {
     return this.prisma.importBatch.findMany({
+      where: { hiddenAt: null },
       orderBy: { createdAt: 'desc' },
       take: 50,
       select: {
@@ -358,25 +359,22 @@ export class GasReadingService {
   }
 
   async deleteUploadHistory(batchId: number) {
-    const batch = await this.prisma.importBatch.findUnique({
-      where: { id: batchId },
-      select: { id: true, fileName: true },
+    const batch = await this.prisma.importBatch.findFirst({
+      where: { id: batchId, hiddenAt: null },
+      select: { id: true },
     });
 
     if (!batch) {
-      throw new NotFoundException('Upload batch not found');
+      throw new NotFoundException('Upload history not found');
     }
 
-    const [deletedReadings] = await this.prisma.$transaction([
-      this.prisma.gasReading.deleteMany({ where: { importBatchId: batchId } }),
-      this.prisma.importBatch.delete({ where: { id: batchId } }),
-    ]);
+    await this.prisma.importBatch.update({
+      where: { id: batchId },
+      data: { hiddenAt: new Date() },
+    });
 
     return {
       deleted: true,
-      batchId,
-      fileName: batch.fileName,
-      deletedReadings: deletedReadings.count,
     };
   }
 

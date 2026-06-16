@@ -55,7 +55,6 @@ export function GasUploadPage() {
   const { data: uploadHistory } = useQuery({
     queryKey: ['upload-history'],
     queryFn: () => api.get('/gas-readings/upload-history').then(r => Array.isArray(r.data) ? r.data : []),
-    staleTime: 30_000,
   })
 
   const { data: furnaces } = useQuery({
@@ -64,7 +63,7 @@ export function GasUploadPage() {
   })
 
   const deleteUploadHistoryMutation = useMutation({
-    mutationFn: (batchId: number) => api.delete(`/gas-readings/upload-history/${batchId}`).then(r => r.data),
+    mutationFn: async (id: number) => api.delete(`/gas-readings/upload-history/${id}`),
     onMutate: async (batchId) => {
       await queryClient.cancelQueries({ queryKey: ['upload-history'] })
       const previousHistory = queryClient.getQueryData(['upload-history'])
@@ -81,13 +80,6 @@ export function GasUploadPage() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['upload-history'] })
-      queryClient.invalidateQueries({ queryKey: ['gas-readings'] })
-    },
-    onSuccess: (_result, batchId) => {
-      queryClient.setQueryData(['upload-history'], (prev: any) => {
-        const current = Array.isArray(prev) ? prev : []
-        return current.filter((historyItem: any) => historyItem.id !== batchId)
-      })
     },
   })
 
@@ -192,12 +184,6 @@ export function GasUploadPage() {
 
   const clearQueue = () => setQueue([])
   const clearCompleted = () => setQueue(prev => prev.filter(q => q.status !== 'completed'))
-  const handleDeleteUploadHistory = async () => {
-    if (!deleteTarget) return
-    const batchId = deleteTarget.id
-    await deleteUploadHistoryMutation.mutateAsync(batchId)
-    setDeleteTarget(null)
-  }
 
   const updateItemFurnace = (index: number, furnaceNo: number | null) => {
     setQueue(prev => prev.map((q, i) => i === index ? { ...q, furnaceNo } : q))
@@ -375,7 +361,12 @@ export function GasUploadPage() {
         message={deleteTarget ? `"${deleteTarget.fileName}" 업로드 이력과 연결된 가스 데이터를 삭제합니다. 계속하시겠습니까?` : ''}
         confirmLabel={deleteUploadHistoryMutation.isPending ? '삭제 중...' : '삭제'}
         danger
-        onConfirm={handleDeleteUploadHistory}
+        onConfirm={() => {
+          if (deleteTarget !== null) {
+            deleteUploadHistoryMutation.mutate(deleteTarget.id)
+            setDeleteTarget(null)
+          }
+        }}
         onCancel={() => setDeleteTarget(null)}
       />
     </div>
