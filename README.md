@@ -171,3 +171,9 @@ npm run prisma:seed
 cd backend && npx prisma generate
 cd frontend && npm install
 ```
+
+## Deployment Notes
+
+- Frontend on Vercel should set `VITE_API_URL` to the public backend URL.
+- Production backend should keep using the hosted PostgreSQL connection from the deployment platform.
+- Local development can use the Windows PostgreSQL service via `backend/.env` and `backend/src/dev/local-postgres.ts`.
