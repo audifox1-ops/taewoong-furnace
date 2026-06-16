@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Header,
   Param,
@@ -61,6 +62,12 @@ export class GasReadingController {
   @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0')
   async getUploadHistory() {
     return this.gasReadingService.getUploadHistory();
+  }
+
+  @Delete('upload-history/:id')
+  @ApiOperation({ summary: 'Delete uploaded file history and its readings' })
+  async deleteUploadHistory(@Param('id') id: string) {
+    return this.gasReadingService.deleteUploadHistory(parseInt(id));
   }
 
   @Get('furnace-fix-candidates')

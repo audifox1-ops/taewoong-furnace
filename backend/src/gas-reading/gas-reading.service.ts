@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as XLSX from 'xlsx';
 
@@ -338,6 +338,29 @@ export class GasReadingService {
       take: 50,
       include: { furnace: true },
     });
+  }
+
+  async deleteUploadHistory(batchId: number) {
+    const batch = await this.prisma.importBatch.findUnique({
+      where: { id: batchId },
+      select: { id: true, fileName: true },
+    });
+
+    if (!batch) {
+      throw new NotFoundException('Upload batch not found');
+    }
+
+    const [deletedReadings] = await this.prisma.$transaction([
+      this.prisma.gasReading.deleteMany({ where: { importBatchId: batchId } }),
+      this.prisma.importBatch.delete({ where: { id: batchId } }),
+    ]);
+
+    return {
+      deleted: true,
+      batchId,
+      fileName: batch.fileName,
+      deletedReadings: deletedReadings.count,
+    };
   }
 
   async listFurnaceFixCandidates(currentFurnaceNo = 1): Promise<FurnaceFixCandidate[]> {

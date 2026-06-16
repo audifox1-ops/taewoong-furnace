@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, Clock, Loader2 } from 'lucide-react'
+import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, Clock, Loader2, Trash2 } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 
 interface QueueItem {
@@ -50,6 +50,7 @@ export function GasUploadPage() {
   const [duplicateMode, setDuplicateMode] = useState<'skip' | 'upsert'>('skip')
   const [isProcessing, setIsProcessing] = useState(false)
   const [showUpsertConfirm, setShowUpsertConfirm] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null)
 
   const { data: uploadHistory } = useQuery({
     queryKey: ['upload-history'],
@@ -59,6 +60,16 @@ export function GasUploadPage() {
   const { data: furnaces } = useQuery({
     queryKey: ['furnaces'],
     queryFn: () => api.get('/furnaces').then(r => Array.isArray(r.data) ? r.data : []),
+  })
+
+  const deleteUploadHistoryMutation = useMutation({
+    mutationFn: (batchId: number) => api.delete(`/gas-readings/upload-history/${batchId}`).then(r => r.data),
+    onSuccess: (_result, batchId) => {
+      queryClient.setQueryData(['upload-history'], (prev: any) => {
+        const current = Array.isArray(prev) ? prev : []
+        return current.filter((historyItem: any) => historyItem.id !== batchId)
+      })
+    },
   })
 
   const addFiles = useCallback((files: FileList | File[]) => {
@@ -162,6 +173,12 @@ export function GasUploadPage() {
 
   const clearQueue = () => setQueue([])
   const clearCompleted = () => setQueue(prev => prev.filter(q => q.status !== 'completed'))
+  const handleDeleteUploadHistory = async () => {
+    if (!deleteTarget) return
+    const batchId = deleteTarget.id
+    await deleteUploadHistoryMutation.mutateAsync(batchId)
+    setDeleteTarget(null)
+  }
 
   const updateItemFurnace = (index: number, furnaceNo: number | null) => {
     setQueue(prev => prev.map((q, i) => i === index ? { ...q, furnaceNo } : q))
@@ -295,7 +312,20 @@ export function GasUploadPage() {
                   <td className="px-3 py-2 text-right">{h.rowCount?.toLocaleString()}</td>
                   <td className="px-3 py-2 text-right text-green-600">{h.successCount?.toLocaleString()}</td>
                   <td className="px-3 py-2 text-right text-red-600">{h.errorCount?.toLocaleString()}</td>
-                  <td className="px-3 py-2 text-gray-500">{new Date(h.createdAt).toLocaleString()}</td>
+                  <td className="px-3 py-2 text-gray-500">
+                    <div className="flex items-center justify-between gap-2">
+                      <span>{new Date(h.createdAt).toLocaleString()}</span>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteTarget(h)}
+                        className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+                        aria-label={`${h.fileName} 삭제`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        삭제
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
               {(!uploadHistory || uploadHistory.length === 0) && (
@@ -314,6 +344,16 @@ export function GasUploadPage() {
         danger
         onConfirm={processQueue}
         onCancel={() => setShowUpsertConfirm(false)}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="업로드 이력 삭제"
+        message={deleteTarget ? `"${deleteTarget.fileName}" 업로드 이력과 연결된 가스 데이터를 삭제합니다. 계속하시겠습니까?` : ''}
+        confirmLabel={deleteUploadHistoryMutation.isPending ? '삭제 중...' : '삭제'}
+        danger
+        onConfirm={handleDeleteUploadHistory}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   )
