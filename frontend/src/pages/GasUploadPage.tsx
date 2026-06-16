@@ -120,6 +120,26 @@ export function GasUploadPage() {
         })
 
         const result = res.data
+        if (result?.status === 'completed') {
+          queryClient.setQueryData(['upload-history'], (prev: any) => {
+            const current = Array.isArray(prev) ? prev : []
+            const optimisticHistoryItem = {
+              id: result.batchId,
+              fileName: item.file.name,
+              furnaceId: furnace.id,
+              furnace,
+              periodStart: item.periodStart ? new Date(item.periodStart).toISOString() : null,
+              periodEnd: item.periodEnd ? new Date(item.periodEnd).toISOString() : null,
+              rowCount: result.totalRows,
+              successCount: result.successCount,
+              errorCount: result.errorCount,
+              createdAt: new Date().toISOString(),
+            }
+
+            return [optimisticHistoryItem, ...current.filter((historyItem: any) => historyItem.id !== optimisticHistoryItem.id)]
+          })
+        }
+
         setQueue(prev => prev.map((q, j) => j === idx ? {
           ...q,
           status: result.status === 'completed' ? 'completed' : 'error',

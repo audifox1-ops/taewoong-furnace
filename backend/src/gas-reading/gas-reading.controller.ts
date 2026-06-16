@@ -1,17 +1,27 @@
-import { BadRequestException, Controller, Get, Post, Query, Param, Body, UploadedFile, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Header,
+  Param,
+  Post,
+  Query,
+  UploadedFile,
+  UploadedFiles,
+  UseInterceptors,
+} from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiConsumes } from '@nestjs/swagger';
+import { ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { GasReadingService } from './gas-reading.service';
-
-
-
 
 @ApiTags('gas-readings')
 @Controller('gas-readings')
 export class GasReadingController {
   constructor(private gasReadingService: GasReadingService) {}
 
-  @Get()  @ApiOperation({ summary: 'Get gas readings with pagination' })
+  @Get()
+  @ApiOperation({ summary: 'Get gas readings with pagination' })
   async findAll(
     @Query('furnaceId') furnaceId?: string,
     @Query('startDate') startDate?: string,
@@ -21,13 +31,15 @@ export class GasReadingController {
   ) {
     return this.gasReadingService.findAll(
       furnaceId ? parseInt(furnaceId) : undefined,
-      startDate, endDate,
+      startDate,
+      endDate,
       page ? parseInt(page) : 1,
       limit ? parseInt(limit) : 100,
     );
   }
 
-  @Get('furnace/:furnaceId')  @ApiOperation({ summary: 'Get gas readings for specific furnace' })
+  @Get('furnace/:furnaceId')
+  @ApiOperation({ summary: 'Get gas readings for specific furnace' })
   async findByFurnace(
     @Param('furnaceId') furnaceId: string,
     @Query('startDate') startDate?: string,
@@ -38,12 +50,15 @@ export class GasReadingController {
     return this.gasReadingService.findByFurnaceAndTimeRange(parseInt(furnaceId), start, end);
   }
 
-  @Get('parse-filename')  @ApiOperation({ summary: 'Parse furnace/date from filename' })
+  @Get('parse-filename')
+  @ApiOperation({ summary: 'Parse furnace/date from filename' })
   parseFilename(@Query('name') name: string) {
     return this.gasReadingService.parseFileName(name);
   }
 
-  @Get('upload-history')  @ApiOperation({ summary: 'Get upload history' })
+  @Get('upload-history')
+  @ApiOperation({ summary: 'Get upload history' })
+  @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
   async getUploadHistory() {
     return this.gasReadingService.getUploadHistory();
   }
@@ -56,7 +71,8 @@ export class GasReadingController {
     );
   }
 
-  @Post('upload')  @ApiConsumes('multipart/form-data')
+  @Post('upload')
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Upload single Excel/CSV (admin only)' })
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
   async upload(
@@ -71,7 +87,8 @@ export class GasReadingController {
     );
   }
 
-  @Post('upload-batch')  @ApiConsumes('multipart/form-data')
+  @Post('upload-batch')
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Upload multiple Excel/CSV files (admin only)' })
   @UseInterceptors(FilesInterceptor('files', 50, { limits: { fileSize: 10 * 1024 * 1024 } }))
   async uploadBatch(
@@ -80,7 +97,7 @@ export class GasReadingController {
     @Body('duplicateMode') duplicateMode?: string,
   ) {
     if (!files?.length) {
-      throw new BadRequestException('업로드할 파일이 없습니다');
+      throw new BadRequestException('?낅줈?쒗븷 ?뚯씪???놁뒿?덈떎');
     }
     return this.gasReadingService.uploadBatch(
       files,
