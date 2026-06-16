@@ -37,7 +37,16 @@ describe('data integrity safeguards', () => {
         }),
       },
     };
-    const service = new ChargeService(prisma as any, {} as any);
+    const service = new ChargeService(
+      prisma as any,
+      {} as any,
+      { getShiftConfig: jest.fn().mockResolvedValue({
+        dayStart: '08:00',
+        dayEnd: '19:30',
+        nightStart: '20:00',
+        nightEnd: '07:00',
+      }) } as any,
+    );
 
     await service.update(1, { gasBefore: null, gasAfter: null });
 
