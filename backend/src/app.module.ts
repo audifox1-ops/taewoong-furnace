@@ -8,6 +8,7 @@ import { GasReadingModule } from './gas-reading/gas-reading.module';
 import { ChargeModule } from './charge/charge.module';
 import { UploadModule } from './upload/upload.module';
 import { AnalysisModule } from './analysis/analysis.module';
+import { SettingsModule } from './settings/settings.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { AnalysisModule } from './analysis/analysis.module';
     ChargeModule,
     UploadModule,
     AnalysisModule,
+    SettingsModule,
   ],
 })
 export class AppModule {}

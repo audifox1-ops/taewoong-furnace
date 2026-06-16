@@ -7,6 +7,7 @@ import { Save, Trash2, Plus, Clipboard, AlertTriangle, Wand2, ExternalLink } fro
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { TableSkeleton } from '@/components/Skeleton'
 import { useToast } from '@/components/Toast'
+import { ExportButton } from '@/components/ExportButton'
 
 interface ChargeRow {
   id?: number
@@ -349,23 +350,19 @@ export function ChargesPage() {
     }
   }
 
-  const handleExport = () => {
-    const headers = ['차지번호', '가열로', '사용전', '사용후', '사용량', '날짜', '주간/야간', '비고']
-    const data = rows.map(r => [
-      r.chargeNo, r.furnaceNo, r.gasBefore, r.gasAfter,
-      r.usage ?? '', r.workDate, r.shift === 'day' ? '주간' : '야간', r.note,
-    ])
-    const csv = [headers, ...data].map(row => row.join('\t')).join('\n')
-    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `charges-${format(new Date(), 'yyyyMMdd')}.csv`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-    toast('success', 'CSV 파일이 다운로드되었습니다')
+  const exportHeaders = ['차지번호', '가열로', '사용전', '사용후', '사용량', '날짜', '주간/야간', '비고']
+  const exportRows = rows.map(r => [
+    r.chargeNo, r.furnaceNo, r.gasBefore, r.gasAfter,
+    r.usage ?? '', r.workDate, r.shift === 'day' ? '주간' : '야간', r.note,
+  ])
+
+  const getExportUrl = () => {
+    const params = new URLSearchParams()
+    if (furnaceId) params.append('furnaceId', String(furnaceId))
+    if (startDate) params.append('startDate', startDate)
+    if (endDate) params.append('endDate', endDate + 'T23:59:59')
+    const qs = params.toString()
+    return `/api/charges/export${qs ? '?' + qs : ''}`
   }
 
   const errorCount = rows.filter(r => r._errors?.length).length
@@ -375,10 +372,12 @@ export function ChargesPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">차지 사용량</h1>
         <div className="flex gap-2">
-          <button onClick={handleExport}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-            내보내기
-          </button>
+          <ExportButton
+            headers={exportHeaders}
+            rows={exportRows}
+            filename="charges"
+            excelUrl={getExportUrl()}
+          />
           <button onClick={handleAutoFillAll}
             disabled={autoFilling !== null}
             className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50">

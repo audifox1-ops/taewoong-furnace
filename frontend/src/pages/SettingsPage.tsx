@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { useToast } from '@/components/Toast'
@@ -18,34 +18,39 @@ const DEFAULT_CONFIG: ShiftConfig = {
   nightEnd: '07:00',
 }
 
-const STORAGE_KEY = 'taewoong-shift-config'
-
-function loadConfig(): ShiftConfig {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    return saved ? JSON.parse(saved) : DEFAULT_CONFIG
-  } catch {
-    return DEFAULT_CONFIG
-  }
-}
-
-function saveConfig(config: ShiftConfig) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(config))
-}
-
 export function SettingsPage() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
-  const [config, setConfig] = useState<ShiftConfig>(loadConfig)
+  const [config, setConfig] = useState<ShiftConfig>(DEFAULT_CONFIG)
+
+  const { data: savedConfig, isLoading: isLoadingConfig } = useQuery({
+    queryKey: ['shift-config'],
+    queryFn: () => api.get('/settings/shift').then((res) => res.data as ShiftConfig),
+    retry: false,
+  })
+
+  useEffect(() => {
+    if (savedConfig) {
+      setConfig(savedConfig)
+    }
+  }, [savedConfig])
+
+  const saveMutation = useMutation({
+    mutationFn: (newConfig: ShiftConfig) => api.put('/settings/shift', newConfig).then((res) => res.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shift-config'] })
+      toast('success', '설정이 저장되었습니다')
+    },
+    onError: () => toast('error', '설정 저장 중 오류가 발생했습니다'),
+  })
 
   const handleSave = () => {
-    saveConfig(config)
-    toast('success', '설정이 저장되었습니다')
+    saveMutation.mutate(config)
   }
 
   const handleReset = () => {
     setConfig(DEFAULT_CONFIG)
-    saveConfig(DEFAULT_CONFIG)
+    saveMutation.mutate(DEFAULT_CONFIG)
     toast('info', '기본값으로 초기화되었습니다')
   }
 
@@ -103,6 +108,17 @@ export function SettingsPage() {
     const hours = Math.floor(diffMinutes / 60)
     const minutes = diffMinutes % 60
     return `${hours}시간 ${minutes}분`
+  }
+
+  if (isLoadingConfig) {
+    return (
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">설정</h1>
+        <div className="bg-white shadow rounded-lg p-6 text-center text-gray-500">
+          설정을 불러오는 중...
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -168,17 +184,17 @@ export function SettingsPage() {
 
           <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-500">
             <p>비근무 구간: {config.dayEnd} ~ {config.nightStart}, {config.nightEnd} ~ {config.dayStart}</p>
-            <p className="mt-1">* 설정은 브라우저에 저장됩니다 (로컬 스토리지).</p>
+            <p className="mt-1">* 설정은 서버 데이터베이스에 저장됩니다.</p>
           </div>
 
           <div className="mt-4 flex gap-2">
-            <button onClick={handleSave}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+            <button onClick={handleSave} disabled={saveMutation.isPending}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50">
               <Save className="h-4 w-4 mr-1" />
-              저장
+              {saveMutation.isPending ? '저장 중...' : '저장'}
             </button>
-            <button onClick={handleReset}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+            <button onClick={handleReset} disabled={saveMutation.isPending}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50">
               <RotateCcw className="h-4 w-4 mr-1" />
               기본값으로 초기화
             </button>
@@ -203,7 +219,7 @@ export function SettingsPage() {
             </div>
             <div>
               <dt className="text-gray-500">데이터베이스</dt>
-              <dd className="font-medium text-gray-900">SQLite</dd>
+              <dd className="font-medium text-gray-900">PostgreSQL</dd>
             </div>
           </dl>
         </div>

@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GasReadingService } from '../gas-reading/gas-reading.service';
+import { SettingsService } from '../settings/settings.service';
 import { Shift, ChargeSource } from '@prisma/client';
 
 @Injectable()
@@ -8,6 +9,7 @@ export class ChargeService {
   constructor(
     private prisma: PrismaService,
     private gasReadingService: GasReadingService,
+    private settingsService: SettingsService,
   ) {}
 
   async findAll(furnaceId?: number, startDate?: string, endDate?: string, shift?: string) {
@@ -250,7 +252,7 @@ export class ChargeService {
   }
 
   async autoFillUsage(furnaceId: number, workDate: Date, shift: string, workEnd?: Date) {
-    const shiftConfig = this.getShiftConfig(shift);
+    const shiftConfig = await this.getShiftConfig(shift);
 
     const periodEnd = workEnd || (() => {
       const d = new Date(workDate);
@@ -445,18 +447,34 @@ export class ChargeService {
     return 'night';
   }
 
-  private getShiftConfig(shift: string) {
-    const configs: Record<string, {
-      startHour: number;
-      startMinute: number;
-      endHour: number;
-      endMinute: number;
-      crossesMidnight: boolean;
-    }> = {
-      day: { startHour: 8, startMinute: 0, endHour: 19, endMinute: 30, crossesMidnight: false },
-      night: { startHour: 20, startMinute: 0, endHour: 7, endMinute: 0, crossesMidnight: true },
+  private async getShiftConfig(shift: string) {
+    const dbConfig = await this.settingsService.getShiftConfig();
+    const parseTime = (t: string) => {
+      const [h, m] = t.split(':').map(Number);
+      return { hours: h, minutes: m };
     };
-    return configs[shift] || configs.day;
+
+    if (shift === 'night') {
+      const start = parseTime(dbConfig.nightStart);
+      const end = parseTime(dbConfig.nightEnd);
+      return {
+        startHour: start.hours,
+        startMinute: start.minutes,
+        endHour: end.hours,
+        endMinute: end.minutes,
+        crossesMidnight: true,
+      };
+    }
+
+    const start = parseTime(dbConfig.dayStart);
+    const end = parseTime(dbConfig.dayEnd);
+    return {
+      startHour: start.hours,
+      startMinute: start.minutes,
+      endHour: end.hours,
+      endMinute: end.minutes,
+      crossesMidnight: false,
+    };
   }
 
   async rematchChargeRecord(chargeRecordId: number) {

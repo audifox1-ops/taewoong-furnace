@@ -3,6 +3,7 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { ensureLocalPostgres } from './dev/local-postgres';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 function getAllowedOrigins(): string[] {
   const defaults = [
@@ -49,6 +50,8 @@ async function bootstrap() {
     forbidNonWhitelisted: true,
     transform: true,
   }));
+
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   app.getHttpAdapter().get('/health', (req, res) => {
     res.json({

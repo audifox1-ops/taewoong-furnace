@@ -1,9 +1,8 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query, } from '@nestjs/common';
-import { ApiTags, ApiOperation, } from '@nestjs/swagger';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, Res, Header } from '@nestjs/common';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Response } from 'express';
+import * as XLSX from 'xlsx';
 import { ChargeService } from './charge.service';
-
-
-
 import { CreateChargeDto, UpdateChargeDto, PasteDataDto, AutoFillDto, BulkUpdateDto } from './dto/charge.dto';
 
 @ApiTags('charges')
@@ -11,7 +10,8 @@ import { CreateChargeDto, UpdateChargeDto, PasteDataDto, AutoFillDto, BulkUpdate
 export class ChargeController {
   constructor(private chargeService: ChargeService) {}
 
-  @Get()  @ApiOperation({ summary: 'Get all charges with filters' })
+  @Get()
+  @ApiOperation({ summary: 'Get all charges with filters' })
   async findAll(
     @Query('furnaceId') furnaceId?: string,
     @Query('startDate') startDate?: string,
@@ -26,12 +26,59 @@ export class ChargeController {
     );
   }
 
-  @Get(':id')  @ApiOperation({ summary: 'Get charge by ID' })
+  @Get('export')
+  @ApiOperation({ summary: 'Export charges as Excel file' })
+  @Header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+  async exportExcel(
+    @Res() res: Response,
+    @Query('furnaceId') furnaceId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('shift') shift?: string,
+  ) {
+    const charges = await this.chargeService.findAll(
+      furnaceId ? parseInt(furnaceId) : undefined,
+      startDate,
+      endDate,
+      shift,
+    );
+
+    const data = charges.map((c: any) => ({
+      ChargeNo: c.chargeNo,
+      Furnace: c.furnace?.name || '',
+      GasBefore: c.gasBefore ?? '',
+      GasAfter: c.gasAfter ?? '',
+      Usage: c.usage ?? '',
+      WorkDate: c.workDate ? new Date(c.workDate).toISOString().slice(0, 10) : '',
+      Shift: c.shift === 'day' ? 'day' : 'night',
+      Source: c.source,
+      Note: c.note || '',
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(data);
+
+    ws['!cols'] = [
+      { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 12 },
+      { wch: 12 }, { wch: 12 }, { wch: 8 }, { wch: 8 }, { wch: 20 },
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Charges');
+
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    const filename = `charges-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(buffer);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get charge by ID' })
   async findOne(@Param('id') id: string) {
     return this.chargeService.findOne(parseInt(id));
   }
 
-  @Post()  @ApiOperation({ summary: 'Create charge entry' })
+  @Post()
+  @ApiOperation({ summary: 'Create charge entry' })
   async create(@Body() body: CreateChargeDto) {
     return this.chargeService.create({
       ...body,
@@ -39,7 +86,8 @@ export class ChargeController {
     });
   }
 
-  @Put(':id')  @ApiOperation({ summary: 'Update charge entry' })
+  @Put(':id')
+  @ApiOperation({ summary: 'Update charge entry' })
   async update(
     @Param('id') id: string,
     @Body() body: UpdateChargeDto,
@@ -50,20 +98,23 @@ export class ChargeController {
     });
   }
 
-  @Post('bulk-update')  @ApiOperation({ summary: 'Bulk update charge entries' })
+  @Post('bulk-update')
+  @ApiOperation({ summary: 'Bulk update charge entries' })
   async bulkUpdate(@Body() body: BulkUpdateDto) {
-    return this.chargeService.bulkUpdate(body.updates.map(update => ({
+    return this.chargeService.bulkUpdate(body.updates.map((update) => ({
       ...update,
       workDate: update.workDate ? new Date(update.workDate) : undefined,
     })));
   }
 
-  @Post('paste')  @ApiOperation({ summary: 'Paste data from clipboard (TSV)' })
+  @Post('paste')
+  @ApiOperation({ summary: 'Paste data from clipboard (TSV)' })
   async pasteData(@Body() body: PasteDataDto) {
     return this.chargeService.pasteData(body.rows);
   }
 
-  @Post('auto-fill')  @ApiOperation({ summary: 'Auto-fill usage from gas readings' })
+  @Post('auto-fill')
+  @ApiOperation({ summary: 'Auto-fill usage from gas readings' })
   async autoFillUsage(@Body() body: AutoFillDto) {
     return this.chargeService.autoFillUsage(
       body.furnaceId,
@@ -73,12 +124,14 @@ export class ChargeController {
     );
   }
 
-  @Delete(':id')  @ApiOperation({ summary: 'Delete charge entry' })
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete charge entry' })
   async delete(@Param('id') id: string) {
     return this.chargeService.delete(parseInt(id));
   }
 
-  @Post(':id/link-record')  @ApiOperation({ summary: 'Link charge to charge record (auto-fills usage)' })
+  @Post(':id/link-record')
+  @ApiOperation({ summary: 'Link charge to charge record (auto-fills usage)' })
   async linkChargeRecord(
     @Param('id') id: string,
     @Body() body: { chargeRecordId: number },
@@ -86,7 +139,8 @@ export class ChargeController {
     return this.chargeService.linkChargeRecord(parseInt(id), body.chargeRecordId);
   }
 
-  @Get('summary/usage')  @ApiOperation({ summary: 'Get usage summary' })
+  @Get('summary/usage')
+  @ApiOperation({ summary: 'Get usage summary' })
   async getUsageSummary(
     @Query('furnaceId') furnaceId?: string,
     @Query('startDate') startDate?: string,
@@ -99,17 +153,20 @@ export class ChargeController {
     );
   }
 
-  @Post('rematch-all')  @ApiOperation({ summary: 'Rematch all charge records to gas data (admin only)' })
+  @Post('rematch-all')
+  @ApiOperation({ summary: 'Rematch all charge records to gas data (admin only)' })
   async rematchAll() {
     return this.chargeService.rematchAllChargeRecords();
   }
 
-  @Get('unmatched')  @ApiOperation({ summary: 'Get unmatched charge records (admin only)' })
+  @Get('unmatched')
+  @ApiOperation({ summary: 'Get unmatched charge records (admin only)' })
   async getUnmatched() {
     return this.chargeService.getUnmatchedRecords();
   }
 
-  @Put('record/:id')  @ApiOperation({ summary: 'Update charge record and auto-rematch' })
+  @Put('record/:id')
+  @ApiOperation({ summary: 'Update charge record and auto-rematch' })
   async updateRecord(
     @Param('id') id: string,
     @Body() body: {

@@ -165,3 +165,12 @@ model ImportBatch {
   @@index([createdAt])
   @@schema("taewoong_furnace")
 }
+
+model Setting {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@schema("taewoong_furnace")
+}
