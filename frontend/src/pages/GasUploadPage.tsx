@@ -170,6 +170,14 @@ export function GasUploadPage() {
   const pendingCount = queue.filter(q => q.status === 'pending').length
   const completedCount = queue.filter(q => q.status === 'completed').length
   const errorCount = queue.filter(q => q.status === 'error').length
+  const resolveHistoryFurnaceName = (historyItem: any) => {
+    const parsed = parseFileName(historyItem.fileName || '')
+    if (parsed.furnaceNo) {
+      const furnace = furnaces?.find((f: any) => f.no === parsed.furnaceNo)
+      return furnace?.name || `가열${parsed.furnaceNo}호`
+    }
+    return historyItem.furnace?.name || '-'
+  }
 
   return (
     <div>
@@ -283,7 +291,7 @@ export function GasUploadPage() {
               {uploadHistory?.map((h: any) => (
                 <tr key={h.id} className="hover:bg-gray-50">
                   <td className="px-3 py-2 text-blue-600">{h.fileName}</td>
-                  <td className="px-3 py-2">{h.furnace?.name || '-'}</td>
+                  <td className="px-3 py-2">{resolveHistoryFurnaceName(h)}</td>
                   <td className="px-3 py-2 text-right">{h.rowCount?.toLocaleString()}</td>
                   <td className="px-3 py-2 text-right text-green-600">{h.successCount?.toLocaleString()}</td>
                   <td className="px-3 py-2 text-right text-red-600">{h.errorCount?.toLocaleString()}</td>
