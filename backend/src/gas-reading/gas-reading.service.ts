@@ -360,7 +360,7 @@ export class GasReadingService {
 
   async deleteUploadHistory(batchId: number) {
     const batch = await this.prisma.importBatch.findFirst({
-      where: { id: batchId, hiddenAt: null },
+      where: { id: batchId },
       select: { id: true },
     });
 
@@ -368,10 +368,14 @@ export class GasReadingService {
       throw new NotFoundException('Upload history not found');
     }
 
-    await this.prisma.importBatch.update({
-      where: { id: batchId },
-      data: { hiddenAt: new Date() },
-    });
+    await this.prisma.$transaction([
+      this.prisma.gasReading.deleteMany({
+        where: { importBatchId: batchId },
+      }),
+      this.prisma.importBatch.delete({
+        where: { id: batchId },
+      }),
+    ]);
 
     return {
       deleted: true,

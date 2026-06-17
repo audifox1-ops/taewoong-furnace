@@ -14,12 +14,15 @@ describe('GasReadingService', () => {
         findFirst: jest.fn(),
         findMany: jest.fn(),
         update: jest.fn(),
+        delete: jest.fn(),
       },
       gasReading: {
         findMany: jest.fn(),
         createMany: jest.fn(),
         upsert: jest.fn(),
+        deleteMany: jest.fn(),
       },
+      $transaction: jest.fn(async (operations: any[]) => Promise.all(operations)),
     };
 
     service = new GasReadingService(prismaMock);
@@ -45,17 +48,19 @@ describe('GasReadingService', () => {
     expect(prismaMock.furnace.findUnique).not.toHaveBeenCalled();
   });
 
-  it('hides upload history without updating gas readings', async () => {
+  it('deletes upload history and its gas readings', async () => {
     prismaMock.importBatch.findFirst.mockResolvedValue({ id: 12 });
-    prismaMock.importBatch.update.mockResolvedValue({ id: 12 });
-    prismaMock.gasReading.updateMany = jest.fn();
+    prismaMock.importBatch.delete.mockResolvedValue({ id: 12 });
+    prismaMock.gasReading.deleteMany.mockResolvedValue({ count: 3 });
 
     await expect(service.deleteUploadHistory(12)).resolves.toEqual({ deleted: true });
 
-    expect(prismaMock.importBatch.update).toHaveBeenCalledWith({
-      where: { id: 12 },
-      data: { hiddenAt: expect.any(Date) },
+    expect(prismaMock.gasReading.deleteMany).toHaveBeenCalledWith({
+      where: { importBatchId: 12 },
     });
-    expect(prismaMock.gasReading.updateMany).not.toHaveBeenCalled();
+    expect(prismaMock.importBatch.delete).toHaveBeenCalledWith({
+      where: { id: 12 },
+    });
+    expect(prismaMock.$transaction).toHaveBeenCalled();
   });
 });
