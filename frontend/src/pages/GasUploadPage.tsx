@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+ï»¿import { useState, useRef, useCallback, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { QUERY_KEYS } from '@/lib/queryKeys'
@@ -17,7 +17,7 @@ interface QueueItem {
 
 function parseFileName(name: string) {
   const normalizeDigits = (value: string) =>
-    value.replace(/[£°-£¹]/g, (digit) => String(digit.charCodeAt(0) - 0xFF10))
+    value.replace(/[ï¼-ï¼™]/g, (digit) => String(digit.charCodeAt(0) - 0xFF10))
 
   const base = name.replace(/\.(xlsx|xls|csv)$/i, '')
   const normalizedBase = normalizeDigits(base)
@@ -25,7 +25,7 @@ function parseFileName(name: string) {
   let periodStart: string | null = null
   let periodEnd: string | null = null
 
-  const furnaceMatch = normalizedBase.match(/(?:°¡¿­\s*·Î?)?\s*(\d+)\s*È£(?:±â)?/i)
+  const furnaceMatch = normalizedBase.match(/(?:ê°€ì—´\s*ë¡œ?)?\s*(\d+)\s*í˜¸(?:ê¸°)?/i)
   if (furnaceMatch) furnaceNo = parseInt(furnaceMatch[1])
 
   const dateMatch = normalizedBase.match(/\((\d{4}-\d{2}-\d{2})\s*[~\-]\s*(\d{4}-\d{2}-\d{2})\)/)
@@ -41,17 +41,17 @@ function repairFileName(value: string) {
   try {
     const bytes = Uint8Array.from(value, (char) => char.charCodeAt(0) & 0xff)
     const repaired = new TextDecoder('utf-8').decode(bytes)
-    return repaired.includes('?') ? value : repaired
+    return /[ê°€-í£]/.test(repaired) ? repaired : value
   } catch {
     return value
   }
 }
 
 const STATUS_CONFIG = {
-  pending: { icon: Clock, color: 'text-gray-400', bg: 'bg-gray-50', label: '´ë±â' },
-  uploading: { icon: Loader2, color: 'text-blue-500', bg: 'bg-blue-50', label: 'Ã³¸® Áß' },
-  completed: { icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-50', label: '¿Ï·á' },
-  error: { icon: AlertCircle, color: 'text-red-500', bg: 'bg-red-50', label: '½ÇÆĞ' },
+  pending: { icon: Clock, color: 'text-gray-400', bg: 'bg-gray-50', label: 'ëŒ€ê¸°' },
+  uploading: { icon: Loader2, color: 'text-blue-500', bg: 'bg-blue-50', label: 'ì²˜ë¦¬ ì¤‘' },
+  completed: { icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-50', label: 'ì™„ë£Œ' },
+  error: { icon: AlertCircle, color: 'text-red-500', bg: 'bg-red-50', label: 'ì‹¤íŒ¨' },
 }
 
 const DELETED_HISTORY_IDS_STORAGE_KEY = 'taewoong.deleted-upload-history-ids'
@@ -202,7 +202,7 @@ export function GasUploadPage() {
       try {
         const furnace = furnaces?.find((f: any) => f.no === item.furnaceNo)
         if (!furnace) {
-          throw new Error('°¡¿­·Î ¹øÈ£¸¦ ¼±ÅÃÇØ ÁÖ¼¼¿ä')
+          throw new Error('ê°€ì—´ë¡œ ë²ˆí˜¸ë¥¼ ì„ íƒí•´ ì£¼ì„¸ìš”')
         }
 
         optimisticHistoryId = addOptimisticHistoryItem(item, furnace)
@@ -290,7 +290,7 @@ export function GasUploadPage() {
 
     const parsed = parseFileName(historyItem.fileName || '')
     if (parsed.furnaceNo) {
-      return `°¡¿­${parsed.furnaceNo}È£`
+      return `ê°€ì—´${parsed.furnaceNo}í˜¸`
     }
 
     return '-'
@@ -303,14 +303,14 @@ export function GasUploadPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">°¡½º µ¥ÀÌÅÍ ´ÙÁß ¾÷·Îµå</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">ê°€ìŠ¤ ë°ì´í„° ë‹¤ì¤‘ ì—…ë¡œë“œ</h1>
 
       {/* Drop Zone */}
       <div
         className="border-2 border-dashed rounded-lg p-8 text-center hover:border-blue-400 transition-colors cursor-pointer mb-6"
         role="button"
         tabIndex={0}
-        aria-label="ÆÄÀÏ ¾÷·Îµå ¿µ¿ª"
+        aria-label="íŒŒì¼ ì—…ë¡œë“œ ì˜ì—­"
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
         onClick={() => fileInputRef.current?.click()}
@@ -319,10 +319,10 @@ export function GasUploadPage() {
         <input ref={fileInputRef} type="file" multiple accept=".xlsx,.xls,.csv" className="hidden"
           onChange={handleFileInput} />
         <FileSpreadsheet className="mx-auto h-10 w-10 text-gray-400 mb-2" />
-        <p className="font-medium text-gray-700">¿©·¯ Excel/CSV ÆÄÀÏÀ» µå·¡±× ¾Ø µå·Ó</p>
-        <p className="text-sm text-gray-500 mt-1">¶Ç´Â Å¬¸¯ÇÏ¿© ÆÄÀÏ ¼±ÅÃ (´ÙÁß ¼±ÅÃ °¡´É)</p>
+        <p className="font-medium text-gray-700">ì—¬ëŸ¬ Excel/CSV íŒŒì¼ì„ ë“œë˜ê·¸ ì•¤ ë“œë¡­</p>
+        <p className="text-sm text-gray-500 mt-1">ë˜ëŠ” í´ë¦­í•˜ì—¬ íŒŒì¼ ì„ íƒ (ë‹¤ì¤‘ ì„ íƒ ê°€ëŠ¥)</p>
         <p className="text-xs text-gray-400 mt-2">
-          ÆÄÀÏ¸í¿¡ È£±â/±â°£ Æ÷ÇÔ ½Ã ÀÚµ¿ ÃßÃâ: 17È£±â_°¡½º_(2026-06-01 ~ 2026-06-30).xlsx
+          íŒŒì¼ëª…ì— í˜¸ê¸°/ê¸°ê°„ í¬í•¨ ì‹œ ìë™ ì¶”ì¶œ: 17í˜¸ê¸°_ê°€ìŠ¤_(2026-06-01 ~ 2026-06-30).xlsx
         </p>
       </div>
 
@@ -331,23 +331,23 @@ export function GasUploadPage() {
         <div className="bg-white shadow rounded-lg p-4 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4 text-sm">
-              <span className="text-gray-600">ÀüÃ¼ {queue.length}°Ç</span>
-              {completedCount > 0 && <span className="text-green-600">¿Ï·á {completedCount}°Ç</span>}
-              {errorCount > 0 && <span className="text-red-600">½ÇÆĞ {errorCount}°Ç</span>}
-              {pendingCount > 0 && <span className="text-gray-400">´ë±â {pendingCount}°Ç</span>}
+              <span className="text-gray-600">ì „ì²´ {queue.length}ê±´</span>
+              {completedCount > 0 && <span className="text-green-600">ì™„ë£Œ {completedCount}ê±´</span>}
+              {errorCount > 0 && <span className="text-red-600">ì‹¤íŒ¨ {errorCount}ê±´</span>}
+              {pendingCount > 0 && <span className="text-gray-400">ëŒ€ê¸° {pendingCount}ê±´</span>}
             </div>
             <div className="flex gap-2">
               <select value={duplicateMode} onChange={(e) => setDuplicateMode(e.target.value as any)}
                 className="text-sm border rounded px-2 py-1">
-                <option value="skip">Áßº¹ °Ç³Ê¶Ù±â</option>
-                <option value="upsert">Áßº¹ µ¤¾î¾²±â</option>
+                <option value="skip">ì¤‘ë³µ ê±´ë„ˆë›°ê¸°</option>
+                <option value="upsert">ì¤‘ë³µ ë®ì–´ì“°ê¸°</option>
               </select>
-              <button onClick={clearCompleted} className="text-sm text-gray-500 hover:text-gray-700">¿Ï·á »èÁ¦</button>
-              <button onClick={clearQueue} className="text-sm text-gray-500 hover:text-gray-700">ÀüÃ¼ »èÁ¦</button>
+              <button onClick={clearCompleted} className="text-sm text-gray-500 hover:text-gray-700">ì™„ë£Œ ì‚­ì œ</button>
+              <button onClick={clearQueue} className="text-sm text-gray-500 hover:text-gray-700">ì „ì²´ ì‚­ì œ</button>
               <button onClick={processQueue} disabled={isProcessing || pendingCount === 0}
                 className="inline-flex items-center px-4 py-1.5 border border-transparent rounded text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50">
                 {isProcessing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
-                {isProcessing ? 'Ã³¸® Áß...' : '¾÷·Îµå ½ÃÀÛ'}
+                {isProcessing ? 'ì²˜ë¦¬ ì¤‘...' : 'ì—…ë¡œë“œ ì‹œì‘'}
               </button>
             </div>
           </div>
@@ -363,8 +363,8 @@ export function GasUploadPage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{item.file.name}</p>
                     <p className="text-xs text-gray-500">
-                      {item.furnaceNo ? `°¡¿­${item.furnaceNo}È£` : 'È£±â ¹ÌÃßÃâ'}
-                      {item.periodStart && ` ¡¤ ${item.periodStart} ~ ${item.periodEnd}`}
+                      {item.furnaceNo ? `ê°€ì—´${item.furnaceNo}í˜¸` : 'í˜¸ê¸° ë¯¸ì¶”ì¶œ'}
+                      {item.periodStart && ` Â· ${item.periodStart} ~ ${item.periodEnd}`}
                     </p>
                   </div>
                   {item.status === 'pending' && (
@@ -373,14 +373,14 @@ export function GasUploadPage() {
                       onChange={(e) => updateItemFurnace(idx, e.target.value ? Number(e.target.value) : null)}
                       className="text-xs border rounded px-2 py-1"
                     >
-                      <option value="">°¡¿­·Î ¼±ÅÃ</option>
+                      <option value="">ê°€ì—´ë¡œ ì„ íƒ</option>
                       {furnaces?.map((f: any) => <option key={f.no} value={f.no}>{f.name}</option>)}
                     </select>
                   )}
                   {item.result && (
                     <span className="text-xs text-gray-500">
-                      {item.result.successCount?.toLocaleString()}Çà ¼º°ø
-                      {item.result.duplicateCount > 0 && `, ${item.result.duplicateCount} Áßº¹`}
+                      {item.result.successCount?.toLocaleString()}í–‰ ì„±ê³µ
+                      {item.result.duplicateCount > 0 && `, ${item.result.duplicateCount} ì¤‘ë³µ`}
                     </span>
                   )}
                   {item.error && <span className="text-xs text-red-500">{item.error}</span>}
@@ -395,18 +395,18 @@ export function GasUploadPage() {
       {/* Upload History */}
       <div className="bg-white shadow rounded-lg overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-200">
-          <h3 className="text-sm font-medium text-gray-700">¾÷·Îµå ÀÌ·Â</h3>
+          <h3 className="text-sm font-medium text-gray-700">ì—…ë¡œë“œ ì´ë ¥</h3>
         </div>
         <div className="overflow-x-auto max-h-64">
           <table className="min-w-full text-sm">
             <thead className="bg-gray-50 sticky top-0">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">ÆÄÀÏ¸í</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">°¡¿­·Î</th>
-                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500">Çà ¼ö</th>
-                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500">¼º°ø</th>
-                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500">½ÇÆĞ</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">¾÷·Îµå ½Ã°£</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">íŒŒì¼ëª…</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">ê°€ì—´ë¡œ</th>
+                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500">í–‰ ìˆ˜</th>
+                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500">ì„±ê³µ</th>
+                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500">ì‹¤íŒ¨</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">ì—…ë¡œë“œ ì‹œê°„</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -414,28 +414,28 @@ export function GasUploadPage() {
                 <tr key={h.id} className={h.isOptimistic ? 'bg-blue-50/70 animate-pulse' : 'hover:bg-gray-50'}>
                   <td className="px-3 py-2 text-blue-600">{resolveHistoryFileName(h)}</td>
                   <td className="px-3 py-2">{resolveHistoryFurnaceName(h)}</td>
-                  <td className="px-3 py-2 text-right">{h.rowCount != null ? h.rowCount.toLocaleString() : h.isOptimistic ? '¾÷·Îµå Áß' : '-'}</td>
+                  <td className="px-3 py-2 text-right">{h.rowCount != null ? h.rowCount.toLocaleString() : h.isOptimistic ? 'ì—…ë¡œë“œ ì¤‘' : '-'}</td>
                   <td className="px-3 py-2 text-right text-green-600">{h.successCount != null ? h.successCount.toLocaleString() : '-'}</td>
                   <td className="px-3 py-2 text-right text-red-600">{h.errorCount != null ? h.errorCount.toLocaleString() : '-'}</td>
                   <td className="px-3 py-2 text-gray-500">
                     <div className="flex items-center justify-between gap-2">
-                      <span>{h.isOptimistic ? '¾÷·Îµå Áß...' : new Date(h.createdAt).toLocaleString()}</span>
+                      <span>{h.isOptimistic ? 'ì—…ë¡œë“œ ì¤‘...' : new Date(h.createdAt).toLocaleString()}</span>
                       {!h.isOptimistic && (
                         <button
                           type="button"
                           onClick={() => {
                             const fileName = resolveHistoryFileName(h)
-                            if (!window.confirm(`"${fileName}" ¾÷·Îµå ÀÌ·Â°ú ¿¬°áµÈ °¡½º µ¥ÀÌÅÍ¸¦ »èÁ¦ÇÕ´Ï´Ù. °è¼ÓÇÏ½Ã°Ú½À´Ï±î?`)) {
+                            if (!window.confirm(`"${fileName}" ì—…ë¡œë“œ ì´ë ¥ê³¼ ì—°ê²°ëœ ê°€ìŠ¤ ë°ì´í„°ë¥¼ ì‚­ì œí•©ë‹ˆë‹¤. ê³„ì†í•˜ì‹œê² ìŠµë‹ˆê¹Œ?`)) {
                               return
                             }
 
                             void deleteUploadHistoryMutation.mutateAsync(Number(h.id))
                           }}
                           className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50"
-                          aria-label={`${resolveHistoryFileName(h)} »èÁ¦`}
+                          aria-label={`${resolveHistoryFileName(h)} ì‚­ì œ`}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
-                          »èÁ¦
+                          ì‚­ì œ
                         </button>
                       )}
                     </div>
@@ -443,7 +443,7 @@ export function GasUploadPage() {
                 </tr>
               ))}
               {(!visibleUploadHistory || visibleUploadHistory.length === 0) && (
-                <tr><td colSpan={6} className="px-3 py-8 text-center text-gray-400">¾÷·Îµå ÀÌ·ÂÀÌ ¾ø½À´Ï´Ù</td></tr>
+                <tr><td colSpan={6} className="px-3 py-8 text-center text-gray-400">ì—…ë¡œë“œ ì´ë ¥ì´ ì—†ìŠµë‹ˆë‹¤</td></tr>
               )}
             </tbody>
           </table>
@@ -452,9 +452,9 @@ export function GasUploadPage() {
 
       <ConfirmDialog
         open={showUpsertConfirm}
-        title="µ¤¾î¾²±â È®ÀÎ"
-        message="µ¤¾î¾²±â ¸ğµå·Î ¾÷·ÎµåÇÏ¸é ±âÁ¸ µ¥ÀÌÅÍ°¡ »õ·Î¿î µ¥ÀÌÅÍ·Î ´ëÃ¼µË´Ï´Ù. °è¼ÓÇÏ½Ã°Ú½À´Ï±î?"
-        confirmLabel="µ¤¾î¾²±â"
+        title="ë®ì–´ì“°ê¸° í™•ì¸"
+        message="ë®ì–´ì“°ê¸° ëª¨ë“œë¡œ ì—…ë¡œë“œí•˜ë©´ ê¸°ì¡´ ë°ì´í„°ê°€ ìƒˆë¡œìš´ ë°ì´í„°ë¡œ ëŒ€ì²´ë©ë‹ˆë‹¤. ê³„ì†í•˜ì‹œê² ìŠµë‹ˆê¹Œ?"
+        confirmLabel="ë®ì–´ì“°ê¸°"
         danger
         onConfirm={processQueue}
         onCancel={() => setShowUpsertConfirm(false)}
@@ -463,5 +463,8 @@ export function GasUploadPage() {
     </div>
   )
 }
+
+
+
 
 

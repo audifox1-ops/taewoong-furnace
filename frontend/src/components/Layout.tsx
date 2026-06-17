@@ -1,24 +1,24 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { ErrorBoundary } from './ErrorBoundary'
 import { useAuth } from '@/contexts/AuthContext'
 import api from '@/lib/api'
 import { QUERY_KEYS } from '@/lib/queryKeys'
-import { 
-  LayoutDashboard, 
-  FileText, 
+import {
+  LayoutDashboard,
+  FileText,
   FileSpreadsheet,
-  Table, 
-  Upload, 
-  BarChart3, 
+  Table,
+  Upload,
+  BarChart3,
   Calendar,
   Settings,
   Link2,
   Factory,
   Menu,
   X,
-  User
+  User,
 } from 'lucide-react'
 
 const navigation = [
@@ -65,9 +65,15 @@ export function Layout() {
       }
       if (e.altKey && !e.ctrlKey && !e.metaKey) {
         const shortcuts: Record<string, string> = {
-          '1': '/', '2': '/gas-readings', '3': '/gas-upload',
-          '4': '/charges', '5': '/uploads', '6': '/rematch',
-          '7': '/analysis', '8': '/monthly-report', '9': '/settings',
+          '1': '/',
+          '2': '/gas-readings',
+          '3': '/gas-upload',
+          '4': '/charges',
+          '5': '/uploads',
+          '6': '/rematch',
+          '7': '/analysis',
+          '8': '/monthly-report',
+          '9': '/settings',
         }
         if (shortcuts[e.key]) {
           e.preventDefault()
@@ -138,7 +144,7 @@ export function Layout() {
 
       {mobileOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
-          <div 
+          <div
             className="fixed inset-0 bg-black/20 transition-opacity"
             onClick={() => setMobileOpen(false)}
             aria-hidden="true"
@@ -157,7 +163,7 @@ export function Layout() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             {user && (
               <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
                 <div className="flex items-center">
@@ -207,3 +213,6 @@ export function Layout() {
     </div>
   )
 }
+
+
+
