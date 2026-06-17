@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { ErrorBoundary } from './ErrorBoundary'
 import { useAuth } from '@/contexts/AuthContext'
+import api from '@/lib/api'
+import { QUERY_KEYS } from '@/lib/queryKeys'
 import { 
   LayoutDashboard, 
   FileText, 
@@ -33,8 +36,22 @@ const navigation = [
 export function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [mobileOpen, setMobileOpen] = useState(false)
   const { user } = useAuth()
+
+  useEffect(() => {
+    queryClient.prefetchQuery({
+      queryKey: QUERY_KEYS.uploadHistory,
+      queryFn: () => api.get('/gas-readings/upload-history').then((r) => Array.isArray(r.data) ? r.data : []),
+      staleTime: 60_000,
+    })
+    queryClient.prefetchQuery({
+      queryKey: QUERY_KEYS.furnaces,
+      queryFn: () => api.get('/furnaces').then((r) => Array.isArray(r.data) ? r.data : []),
+      staleTime: 60_000,
+    })
+  }, [queryClient])
 
   useEffect(() => {
     setMobileOpen(false)

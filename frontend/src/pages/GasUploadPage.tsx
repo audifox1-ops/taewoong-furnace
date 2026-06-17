@@ -56,11 +56,13 @@ export function GasUploadPage() {
   const { data: uploadHistory } = useQuery({
     queryKey: QUERY_KEYS.uploadHistory,
     queryFn: () => api.get('/gas-readings/upload-history').then(r => Array.isArray(r.data) ? r.data : []),
+    staleTime: 60_000,
   })
 
   const { data: furnaces } = useQuery({
-    queryKey: ['furnaces'],
+    queryKey: QUERY_KEYS.furnaces,
     queryFn: () => api.get('/furnaces').then(r => Array.isArray(r.data) ? r.data : []),
+    staleTime: 60_000,
   })
 
   const addOptimisticHistoryItem = (item: QueueItem, furnace: any) => {
