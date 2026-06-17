@@ -339,7 +339,7 @@ export class GasReadingService {
   }
 
   async getUploadHistory() {
-    return this.prisma.importBatch.findMany({
+    const batches = await this.prisma.importBatch.findMany({
       orderBy: { createdAt: 'desc' },
       take: 50,
       select: {
@@ -361,6 +361,12 @@ export class GasReadingService {
         },
       },
     });
+
+    return batches.map((batch: any) => ({
+      ...batch,
+      furnaceNo: batch.furnace?.no ?? null,
+      furnaceName: batch.furnace?.name ?? null,
+    }));
   }
 
   async deleteUploadHistory(batchId: number) {

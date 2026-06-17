@@ -63,4 +63,29 @@ describe('GasReadingService', () => {
     });
     expect(prismaMock.$transaction).toHaveBeenCalled();
   });
+
+  it('exposes furnace details in upload history rows', async () => {
+    prismaMock.importBatch.findMany.mockResolvedValue([
+      {
+        id: 3,
+        fileName: '19호기_가스.xlsx',
+        furnaceId: 18,
+        periodStart: null,
+        periodEnd: null,
+        rowCount: 2,
+        successCount: 2,
+        errorCount: 0,
+        createdAt: new Date('2026-06-16T09:01:55.394Z'),
+        furnace: { id: 18, no: 19, name: '가열19호' },
+      },
+    ]);
+
+    await expect(service.getUploadHistory()).resolves.toEqual([
+      expect.objectContaining({
+        id: 3,
+        furnaceNo: 19,
+        furnaceName: '가열19호',
+      }),
+    ]);
+  });
 });

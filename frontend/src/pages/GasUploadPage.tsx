@@ -70,6 +70,8 @@ export function GasUploadPage() {
       tempId,
       fileName: item.file.name,
       furnaceId: furnace.id,
+      furnaceNo: furnace.no,
+      furnaceName: furnace.name,
       furnace,
       periodStart: item.periodStart ? new Date(item.periodStart).toISOString() : null,
       periodEnd: item.periodEnd ? new Date(item.periodEnd).toISOString() : null,
@@ -178,6 +180,8 @@ export function GasUploadPage() {
               tempId: optimisticHistoryId,
               fileName: item.file.name,
               furnaceId: furnace.id,
+              furnaceNo: furnace.no,
+              furnaceName: furnace.name,
               furnace,
               periodStart: item.periodStart ? new Date(item.periodStart).toISOString() : null,
               periodEnd: item.periodEnd ? new Date(item.periodEnd).toISOString() : null,
@@ -232,6 +236,10 @@ export function GasUploadPage() {
   const completedCount = queue.filter(q => q.status === 'completed').length
   const errorCount = queue.filter(q => q.status === 'error').length
   const resolveHistoryFurnaceName = (historyItem: any) => {
+    if (historyItem.furnaceName) {
+      return historyItem.furnaceName
+    }
+
     if (historyItem.furnace?.name) {
       return historyItem.furnace.name
     }
