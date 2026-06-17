@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
+import { QUERY_KEYS } from '@/lib/queryKeys'
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, Clock, Loader2, Trash2 } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 
@@ -53,7 +54,7 @@ export function GasUploadPage() {
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null)
 
   const { data: uploadHistory } = useQuery({
-    queryKey: ['upload-history'],
+    queryKey: QUERY_KEYS.uploadHistory,
     queryFn: () => api.get('/gas-readings/upload-history').then(r => Array.isArray(r.data) ? r.data : []),
   })
 
@@ -79,7 +80,7 @@ export function GasUploadPage() {
       isOptimistic: true,
     }
 
-    queryClient.setQueryData(['upload-history'], (prev: any) => {
+    queryClient.setQueryData(QUERY_KEYS.uploadHistory, (prev: any) => {
       const current = Array.isArray(prev) ? prev : []
       return [optimisticHistoryItem, ...current.filter((historyItem: any) => historyItem.id !== tempId)]
     })
@@ -90,9 +91,9 @@ export function GasUploadPage() {
   const deleteUploadHistoryMutation = useMutation({
     mutationFn: async (id: number) => api.delete(`/gas-readings/upload-history/${id}`),
     onMutate: async (batchId) => {
-      await queryClient.cancelQueries({ queryKey: ['upload-history'] })
-      const previousHistory = queryClient.getQueryData(['upload-history'])
-      queryClient.setQueryData(['upload-history'], (prev: any) => {
+      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.uploadHistory })
+      const previousHistory = queryClient.getQueryData(QUERY_KEYS.uploadHistory)
+      queryClient.setQueryData(QUERY_KEYS.uploadHistory, (prev: any) => {
         const current = Array.isArray(prev) ? prev : []
         return current.filter((historyItem: any) => historyItem.id !== batchId)
       })
@@ -100,11 +101,11 @@ export function GasUploadPage() {
     },
     onError: (_error, _batchId, context) => {
       if (context?.previousHistory) {
-        queryClient.setQueryData(['upload-history'], context.previousHistory)
+        queryClient.setQueryData(QUERY_KEYS.uploadHistory, context.previousHistory)
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['upload-history'] })
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.uploadHistory })
     },
   })
 
@@ -170,7 +171,7 @@ export function GasUploadPage() {
 
         const result = res.data
         if (result?.status === 'completed') {
-          queryClient.setQueryData(['upload-history'], (prev: any) => {
+          queryClient.setQueryData(QUERY_KEYS.uploadHistory, (prev: any) => {
             const current = Array.isArray(prev) ? prev : []
             const finalHistoryItem = {
               id: result.batchId,
@@ -189,7 +190,7 @@ export function GasUploadPage() {
             return [finalHistoryItem, ...current.filter((historyItem: any) => historyItem.id !== optimisticHistoryId)]
           })
         } else {
-          queryClient.setQueryData(['upload-history'], (prev: any) => {
+          queryClient.setQueryData(QUERY_KEYS.uploadHistory, (prev: any) => {
             const current = Array.isArray(prev) ? prev : []
             return current.filter((historyItem: any) => historyItem.id !== optimisticHistoryId)
           })
@@ -202,7 +203,7 @@ export function GasUploadPage() {
           error: result.error,
         } : q))
       } catch (err: any) {
-        queryClient.setQueryData(['upload-history'], (prev: any) => {
+        queryClient.setQueryData(QUERY_KEYS.uploadHistory, (prev: any) => {
           const current = Array.isArray(prev) ? prev : []
           return current.filter((historyItem: any) => historyItem.id !== optimisticHistoryId)
         })
@@ -216,8 +217,8 @@ export function GasUploadPage() {
     }
 
     setIsProcessing(false)
-    queryClient.invalidateQueries({ queryKey: ['gas-readings'] })
-    queryClient.invalidateQueries({ queryKey: ['upload-history'] })
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.gasReadings })
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.uploadHistory })
   }
 
   const clearQueue = () => setQueue([])

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
+import { QUERY_KEYS } from '@/lib/queryKeys'
 import { useToast } from '@/components/Toast'
 import { Settings, Clock, Save, RotateCcw, RefreshCw, FileSpreadsheet, AlertTriangle } from 'lucide-react'
 
@@ -24,7 +25,7 @@ export function SettingsPage() {
   const [config, setConfig] = useState<ShiftConfig>(DEFAULT_CONFIG)
 
   const { data: savedConfig, isLoading: isLoadingConfig } = useQuery({
-    queryKey: ['shift-config'],
+    queryKey: QUERY_KEYS.shiftConfig,
     queryFn: () => api.get('/settings/shift').then((res) => res.data as ShiftConfig),
     retry: false,
   })
@@ -38,7 +39,7 @@ export function SettingsPage() {
   const saveMutation = useMutation({
     mutationFn: (newConfig: ShiftConfig) => api.put('/settings/shift', newConfig).then((res) => res.data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['shift-config'] })
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.shiftConfig })
       toast('success', '설정이 저장되었습니다')
     },
     onError: () => toast('error', '설정 저장 중 오류가 발생했습니다'),
@@ -55,7 +56,7 @@ export function SettingsPage() {
   }
 
   const { data: furnaceFixCandidates, isLoading: isLoadingFixCandidates } = useQuery({
-    queryKey: ['gas-reading-furnace-fix-candidates'],
+    queryKey: QUERY_KEYS.gasReadingFurnaceFixCandidates,
     queryFn: () => api.get('/gas-readings/furnace-fix-candidates?currentFurnaceNo=1').then((res) => Array.isArray(res.data) ? res.data : []),
   })
 
@@ -67,9 +68,9 @@ export function SettingsPage() {
       } else {
         toast('info', result.reason || '수정할 항목이 없습니다')
       }
-      queryClient.invalidateQueries({ queryKey: ['gas-reading-furnace-fix-candidates'] })
-      queryClient.invalidateQueries({ queryKey: ['upload-history'] })
-      queryClient.invalidateQueries({ queryKey: ['gas-readings'] })
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.gasReadingFurnaceFixCandidates })
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.uploadHistory })
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.gasReadings })
     },
     onError: (error: any) => {
       const message = error?.response?.data?.message
@@ -86,9 +87,9 @@ export function SettingsPage() {
       const updated = results.filter((item: any) => item.updated).length
       const skipped = results.length - updated
       toast('success', `일괄 수정 완료: ${updated}건 적용, ${skipped}건 건너뜀`)
-      queryClient.invalidateQueries({ queryKey: ['gas-reading-furnace-fix-candidates'] })
-      queryClient.invalidateQueries({ queryKey: ['upload-history'] })
-      queryClient.invalidateQueries({ queryKey: ['gas-readings'] })
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.gasReadingFurnaceFixCandidates })
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.uploadHistory })
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.gasReadings })
     },
     onError: () => {
       toast('error', '일괄 수정 중 오류가 발생했습니다')

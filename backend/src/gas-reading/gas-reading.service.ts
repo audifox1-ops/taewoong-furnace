@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as XLSX from 'xlsx';
 
@@ -49,6 +49,8 @@ export interface FurnaceFixResult {
 
 @Injectable()
 export class GasReadingService {
+  private readonly logger = new Logger(GasReadingService.name);
+
   constructor(private prisma: PrismaService) {}
 
   parseFileName(fileName: string): FileParseResult {
@@ -301,6 +303,10 @@ export class GasReadingService {
         data: { successCount: result.successCount, errorCount: result.errorCount },
       });
 
+      this.logger.log(
+        `Upload completed batchId=${importBatch.id} furnaceNo=${result.furnaceNo} rows=${result.totalRows} success=${result.successCount} errors=${result.errorCount}`,
+      );
+
       result.status = 'completed';
     } catch (err: any) {
       result.error = err.message || '처리 중 오류 발생';
@@ -375,6 +381,8 @@ export class GasReadingService {
         where: { id: batchId },
       }),
     ]);
+
+    this.logger.log(`Deleted upload history batchId=${batchId} and linked gas readings`);
 
     return {
       deleted: true,
