@@ -62,6 +62,31 @@ export function GasUploadPage() {
     queryFn: () => api.get('/furnaces').then(r => Array.isArray(r.data) ? r.data : []),
   })
 
+  const addOptimisticHistoryItem = (item: QueueItem, furnace: any) => {
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    const optimisticHistoryItem = {
+      id: tempId,
+      tempId,
+      fileName: item.file.name,
+      furnaceId: furnace.id,
+      furnace,
+      periodStart: item.periodStart ? new Date(item.periodStart).toISOString() : null,
+      periodEnd: item.periodEnd ? new Date(item.periodEnd).toISOString() : null,
+      rowCount: null,
+      successCount: null,
+      errorCount: null,
+      createdAt: new Date().toISOString(),
+      isOptimistic: true,
+    }
+
+    queryClient.setQueryData(['upload-history'], (prev: any) => {
+      const current = Array.isArray(prev) ? prev : []
+      return [optimisticHistoryItem, ...current.filter((historyItem: any) => historyItem.id !== tempId)]
+    })
+
+    return tempId
+  }
+
   const deleteUploadHistoryMutation = useMutation({
     mutationFn: async (id: number) => api.delete(`/gas-readings/upload-history/${id}`),
     onMutate: async (batchId) => {
@@ -123,6 +148,7 @@ export function GasUploadPage() {
     for (let i = 0; i < pendingItems.length; i++) {
       const item = pendingItems[i]
       const idx = queue.indexOf(item)
+      let optimisticHistoryId = ''
 
       setQueue(prev => prev.map((q, j) => j === idx ? { ...q, status: 'uploading' } : q))
 
@@ -132,6 +158,7 @@ export function GasUploadPage() {
           throw new Error('가열로 번호를 선택해 주세요')
         }
 
+        optimisticHistoryId = addOptimisticHistoryItem(item, furnace)
         const formData = new FormData()
         formData.append('file', item.file)
         formData.append('furnaceId', String(furnace.id))
@@ -145,8 +172,9 @@ export function GasUploadPage() {
         if (result?.status === 'completed') {
           queryClient.setQueryData(['upload-history'], (prev: any) => {
             const current = Array.isArray(prev) ? prev : []
-            const optimisticHistoryItem = {
+            const finalHistoryItem = {
               id: result.batchId,
+              tempId: optimisticHistoryId,
               fileName: item.file.name,
               furnaceId: furnace.id,
               furnace,
@@ -158,7 +186,12 @@ export function GasUploadPage() {
               createdAt: new Date().toISOString(),
             }
 
-            return [optimisticHistoryItem, ...current.filter((historyItem: any) => historyItem.id !== optimisticHistoryItem.id)]
+            return [finalHistoryItem, ...current.filter((historyItem: any) => historyItem.id !== optimisticHistoryId)]
+          })
+        } else {
+          queryClient.setQueryData(['upload-history'], (prev: any) => {
+            const current = Array.isArray(prev) ? prev : []
+            return current.filter((historyItem: any) => historyItem.id !== optimisticHistoryId)
           })
         }
 
@@ -169,6 +202,11 @@ export function GasUploadPage() {
           error: result.error,
         } : q))
       } catch (err: any) {
+        queryClient.setQueryData(['upload-history'], (prev: any) => {
+          const current = Array.isArray(prev) ? prev : []
+          return current.filter((historyItem: any) => historyItem.id !== optimisticHistoryId)
+        })
+
         setQueue(prev => prev.map((q, j) => j === idx ? {
           ...q,
           status: 'error',
@@ -315,15 +353,16 @@ export function GasUploadPage() {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {uploadHistory?.map((h: any) => (
-                <tr key={h.id} className="hover:bg-gray-50">
+                <tr key={h.id} className={h.isOptimistic ? 'bg-blue-50/70 animate-pulse' : 'hover:bg-gray-50'}>
                   <td className="px-3 py-2 text-blue-600">{h.fileName}</td>
                   <td className="px-3 py-2">{resolveHistoryFurnaceName(h)}</td>
-                  <td className="px-3 py-2 text-right">{h.rowCount?.toLocaleString()}</td>
-                  <td className="px-3 py-2 text-right text-green-600">{h.successCount?.toLocaleString()}</td>
-                  <td className="px-3 py-2 text-right text-red-600">{h.errorCount?.toLocaleString()}</td>
+                  <td className="px-3 py-2 text-right">{h.rowCount != null ? h.rowCount.toLocaleString() : h.isOptimistic ? '업로드 중' : '-'}</td>
+                  <td className="px-3 py-2 text-right text-green-600">{h.successCount != null ? h.successCount.toLocaleString() : '-'}</td>
+                  <td className="px-3 py-2 text-right text-red-600">{h.errorCount != null ? h.errorCount.toLocaleString() : '-'}</td>
                   <td className="px-3 py-2 text-gray-500">
                     <div className="flex items-center justify-between gap-2">
-                      <span>{new Date(h.createdAt).toLocaleString()}</span>
+                      <span>{h.isOptimistic ? '업로드 중...' : new Date(h.createdAt).toLocaleString()}</span>
+                      {!h.isOptimistic && (
                       <button
                         type="button"
                         onClick={() => setDeleteTarget(h)}
@@ -333,6 +372,7 @@ export function GasUploadPage() {
                         <Trash2 className="h-3.5 w-3.5" />
                         삭제
                       </button>
+                      )}
                     </div>
                   </td>
                 </tr>
