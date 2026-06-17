@@ -90,35 +90,39 @@ export function Layout() {
       <nav className="bg-white shadow" aria-label="메인 내비게이션">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
-            <div className="flex">
-              <div className="flex-shrink-0 flex items-center">
+            <div className="flex min-w-0 items-center">
+              <Link
+                to="/"
+                className="flex-shrink-0 flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-gray-100"
+                aria-label="대시보드로 이동"
+              >
                 <Factory className="h-8 w-8 text-blue-600" />
                 <span className="ml-2 text-xl font-bold text-gray-900">TAEWOONG</span>
-              </div>
-              <div className="hidden md:ml-6 md:flex md:space-x-8">
+              </Link>
+              <div className="hidden min-w-0 md:ml-6 md:flex md:flex-1 md:flex-nowrap md:gap-2 lg:gap-4 overflow-x-auto">
                 {navigation.map((item) => {
                   const isActive = location.pathname === item.href
                   return (
                     <Link
                       key={item.name}
                       to={item.href}
-                      className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors ${
+                      className={`inline-flex flex-shrink-0 items-center gap-1 px-1 pt-1 whitespace-nowrap border-b-2 text-[13px] font-medium transition-colors ${
                         isActive
                           ? 'border-blue-500 text-gray-900'
                           : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                       }`}
                     >
-                      <item.icon className="mr-1 h-4 w-4" />
+                      <item.icon className="h-4 w-4" />
                       {item.name}
                     </Link>
                   )
                 })}
               </div>
             </div>
-            <div className="flex items-center">
-              {user && (
-                <div className="hidden md:flex items-center mr-4">
-                  <div className="flex items-center text-sm text-gray-600">
+              <div className="flex items-center">
+                {user && (
+                  <div className="hidden md:flex items-center mr-4">
+                    <div className="flex items-center text-sm text-gray-600">
                     <User className="h-4 w-4 mr-1" />
                     <span>{user.username}</span>
                     {user.role === 'admin' && (
@@ -151,10 +155,10 @@ export function Layout() {
           />
           <div className="fixed inset-y-0 left-0 w-72 bg-white shadow-xl transform transition-transform">
             <div className="flex items-center justify-between px-4 h-16 border-b border-gray-200">
-              <div className="flex items-center">
+              <Link to="/" className="flex items-center gap-2" aria-label="대시보드로 이동">
                 <Factory className="h-6 w-6 text-blue-600" />
-                <span className="ml-2 text-lg font-bold text-gray-900">TAEWOONG</span>
-              </div>
+                <span className="text-lg font-bold text-gray-900">TAEWOONG</span>
+              </Link>
               <button
                 onClick={() => setMobileOpen(false)}
                 className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
