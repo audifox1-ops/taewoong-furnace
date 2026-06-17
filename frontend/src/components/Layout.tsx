@@ -43,12 +43,13 @@ export function Layout() {
   useEffect(() => {
     queryClient.prefetchQuery({
       queryKey: QUERY_KEYS.uploadHistory,
-      queryFn: () => api.get('/gas-readings/upload-history').then((r) => Array.isArray(r.data) ? r.data : []),
+      queryFn: ({ signal }) =>
+        api.get('/gas-readings/upload-history', { signal }).then((r) => Array.isArray(r.data) ? r.data : []),
       staleTime: 60_000,
     })
     queryClient.prefetchQuery({
       queryKey: QUERY_KEYS.furnaces,
-      queryFn: () => api.get('/furnaces').then((r) => Array.isArray(r.data) ? r.data : []),
+      queryFn: ({ signal }) => api.get('/furnaces', { signal }).then((r) => Array.isArray(r.data) ? r.data : []),
       staleTime: 60_000,
     })
   }, [queryClient])
