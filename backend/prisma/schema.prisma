@@ -159,12 +159,10 @@ model ImportBatch {
   successCount Int           @default(0)
   errorCount   Int           @default(0)
   createdAt    DateTime      @default(now())
-  hiddenAt     DateTime?
 
   gasReadings  GasReading[]
 
   @@index([createdAt])
-  @@index([hiddenAt, createdAt])
   @@schema("taewoong_furnace")
 }
 

@@ -334,7 +334,6 @@ export class GasReadingService {
 
   async getUploadHistory() {
     return this.prisma.importBatch.findMany({
-      where: { hiddenAt: null },
       orderBy: { createdAt: 'desc' },
       take: 50,
       select: {
