@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, Logger, NotFoundException } from '@nestjs/common';
+﻿import { Injectable, BadRequestException, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as XLSX from 'xlsx';
 
@@ -53,11 +53,24 @@ export class GasReadingService {
 
   constructor(private prisma: PrismaService) {}
 
+  private repairFileName(value: string) {
+    if (!value) return value;
+    if (/[가-힣]/.test(value)) {
+      return value;
+    }
+    try {
+      const repaired = Buffer.from(value, 'latin1').toString('utf8');
+      return /[가-힣]/.test(repaired) ? repaired : value;
+    } catch {
+      return value;
+    }
+  }
+
   parseFileName(fileName: string): FileParseResult {
     const normalizeDigits = (value: string) =>
       value.replace(/[０-９]/g, (digit) => String(digit.charCodeAt(0) - 0xFF10));
 
-    const base = fileName.replace(/\.(xlsx|xls|csv)$/i, '');
+    const base = this.repairFileName(fileName).replace(/\.(xlsx|xls|csv)$/i, '');
     const normalizedBase = normalizeDigits(base);
     let furnaceNo: number | null = null;
     let furnaceName: string | null = null;
@@ -76,7 +89,7 @@ export class GasReadingService {
       periodEnd = dateRangeMatch[2];
     }
 
-    return { fileName, furnaceNo, furnaceName, periodStart, periodEnd, headers: [], rowCount: 0 };
+    return { fileName: this.repairFileName(fileName), furnaceNo, furnaceName, periodStart, periodEnd, headers: [], rowCount: 0 };
   }
 
   async findAll(furnaceId?: number, startDate?: string, endDate?: string, page = 1, limit = 100) {
@@ -180,7 +193,8 @@ export class GasReadingService {
         return result;
       }
 
-      const parsed = this.parseFileName(file.originalname);
+      const storedFileName = this.repairFileName(file.originalname);
+      const parsed = this.parseFileName(storedFileName);
       const parsedFurnace = parsed.furnaceNo
         ? await this.prisma.furnace.findUnique({ where: { no: parsed.furnaceNo } })
         : null;
@@ -218,7 +232,7 @@ export class GasReadingService {
 
       let importBatch = await this.prisma.importBatch.create({
         data: {
-          fileName: file.originalname,
+          fileName: storedFileName,
           furnaceId: effectiveFurnaceId,
           periodStart: parsed.periodStart ? new Date(parsed.periodStart) : null,
           periodEnd: parsed.periodEnd ? new Date(parsed.periodEnd) : null,
@@ -364,6 +378,7 @@ export class GasReadingService {
 
     return batches.map((batch: any) => ({
       ...batch,
+      fileName: this.repairFileName(batch.fileName),
       furnaceNo: batch.furnace?.no ?? null,
       furnaceName: batch.furnace?.name ?? null,
     }));
@@ -414,7 +429,7 @@ export class GasReadingService {
         const targetFurnaceNo = parsed.furnaceNo;
         return {
           batchId: batch.id,
-          fileName: batch.fileName,
+          fileName: this.repairFileName(batch.fileName),
           currentFurnaceNo: batch.furnace?.no ?? null,
           currentFurnaceName: batch.furnace?.name ?? null,
           targetFurnaceNo,
@@ -445,7 +460,7 @@ export class GasReadingService {
     if ((batch.furnace?.no ?? null) !== currentFurnaceNo) {
       return {
         batchId,
-        fileName: batch.fileName,
+        fileName: this.repairFileName(batch.fileName),
         fromFurnaceNo: batch.furnace?.no ?? null,
         toFurnaceNo: null,
         rowCount: batch.rowCount,
@@ -458,7 +473,7 @@ export class GasReadingService {
     if (!parsed.furnaceNo) {
       return {
         batchId,
-        fileName: batch.fileName,
+        fileName: this.repairFileName(batch.fileName),
         fromFurnaceNo: batch.furnace?.no ?? null,
         toFurnaceNo: null,
         rowCount: batch.rowCount,
@@ -493,7 +508,7 @@ export class GasReadingService {
 
     return {
       batchId,
-      fileName: batch.fileName,
+      fileName: this.repairFileName(batch.fileName),
       fromFurnaceNo: batch.furnace?.no ?? null,
       toFurnaceNo: targetFurnace.no,
       rowCount: batch.rowCount,

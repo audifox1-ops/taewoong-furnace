@@ -1,4 +1,4 @@
-import { GasReadingService } from './gas-reading.service';
+﻿import { GasReadingService } from './gas-reading.service';
 
 describe('GasReadingService', () => {
   let service: GasReadingService;
@@ -68,7 +68,7 @@ describe('GasReadingService', () => {
     prismaMock.importBatch.findMany.mockResolvedValue([
       {
         id: 3,
-        fileName: '19호기_가스.xlsx',
+        fileName: Buffer.from('19호기_가스.xlsx', 'utf8').toString('latin1'),
         furnaceId: 18,
         periodStart: null,
         periodEnd: null,
@@ -85,6 +85,7 @@ describe('GasReadingService', () => {
         id: 3,
         furnaceNo: 19,
         furnaceName: '가열19호',
+        fileName: '19호기_가스.xlsx',
       }),
     ]);
   });

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+﻿import { useState, useRef, useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { QUERY_KEYS } from '@/lib/queryKeys'
@@ -37,6 +37,16 @@ function parseFileName(name: string) {
   return { furnaceNo, periodStart, periodEnd }
 }
 
+function repairFileName(value: string) {
+  try {
+    const bytes = Uint8Array.from(value, (char) => char.charCodeAt(0) & 0xff)
+    const repaired = new TextDecoder('utf-8').decode(bytes)
+    return repaired.includes('�') ? value : repaired
+  } catch {
+    return value
+  }
+}
+
 const STATUS_CONFIG = {
   pending: { icon: Clock, color: 'text-gray-400', bg: 'bg-gray-50', label: '대기' },
   uploading: { icon: Loader2, color: 'text-blue-500', bg: 'bg-blue-50', label: '처리 중' },
@@ -51,7 +61,6 @@ export function GasUploadPage() {
   const [duplicateMode, setDuplicateMode] = useState<'skip' | 'upsert'>('skip')
   const [isProcessing, setIsProcessing] = useState(false)
   const [showUpsertConfirm, setShowUpsertConfirm] = useState(false)
-  const [deleteTarget, setDeleteTarget] = useState<any | null>(null)
 
   const { data: uploadHistory } = useQuery({
     queryKey: QUERY_KEYS.uploadHistory,
@@ -67,10 +76,11 @@ export function GasUploadPage() {
 
   const addOptimisticHistoryItem = (item: QueueItem, furnace: any) => {
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    const displayFileName = repairFileName(item.file.name)
     const optimisticHistoryItem = {
       id: tempId,
       tempId,
-      fileName: item.file.name,
+      fileName: displayFileName,
       furnaceId: furnace.id,
       furnaceNo: furnace.no,
       furnaceName: furnace.name,
@@ -180,7 +190,7 @@ export function GasUploadPage() {
             const finalHistoryItem = {
               id: result.batchId,
               tempId: optimisticHistoryId,
-              fileName: item.file.name,
+              fileName: repairFileName(item.file.name),
               furnaceId: furnace.id,
               furnaceNo: furnace.no,
               furnaceName: furnace.name,
@@ -253,6 +263,8 @@ export function GasUploadPage() {
 
     return '-'
   }
+
+  const resolveHistoryFileName = (historyItem: any) => repairFileName(historyItem.fileName || '')
 
   return (
     <div>
@@ -365,7 +377,7 @@ export function GasUploadPage() {
             <tbody className="divide-y divide-gray-200">
               {uploadHistory?.map((h: any) => (
                 <tr key={h.id} className={h.isOptimistic ? 'bg-blue-50/70 animate-pulse' : 'hover:bg-gray-50'}>
-                  <td className="px-3 py-2 text-blue-600">{h.fileName}</td>
+                  <td className="px-3 py-2 text-blue-600">{resolveHistoryFileName(h)}</td>
                   <td className="px-3 py-2">{resolveHistoryFurnaceName(h)}</td>
                   <td className="px-3 py-2 text-right">{h.rowCount != null ? h.rowCount.toLocaleString() : h.isOptimistic ? '업로드 중' : '-'}</td>
                   <td className="px-3 py-2 text-right text-green-600">{h.successCount != null ? h.successCount.toLocaleString() : '-'}</td>
@@ -374,15 +386,22 @@ export function GasUploadPage() {
                     <div className="flex items-center justify-between gap-2">
                       <span>{h.isOptimistic ? '업로드 중...' : new Date(h.createdAt).toLocaleString()}</span>
                       {!h.isOptimistic && (
-                      <button
-                        type="button"
-                        onClick={() => setDeleteTarget(h)}
-                        className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50"
-                        aria-label={`${h.fileName} 삭제`}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        삭제
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const fileName = resolveHistoryFileName(h)
+                            if (!window.confirm(`"${fileName}" 업로드 이력과 연결된 가스 데이터를 삭제합니다. 계속하시겠습니까?`)) {
+                              return
+                            }
+
+                            void deleteUploadHistoryMutation.mutateAsync(Number(h.id))
+                          }}
+                          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+                          aria-label={`${resolveHistoryFileName(h)} 삭제`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          삭제
+                        </button>
                       )}
                     </div>
                   </td>
@@ -406,20 +425,6 @@ export function GasUploadPage() {
         onCancel={() => setShowUpsertConfirm(false)}
       />
 
-      <ConfirmDialog
-        open={!!deleteTarget}
-        title="업로드 이력 삭제"
-        message={deleteTarget ? `"${deleteTarget.fileName}" 업로드 이력과 연결된 가스 데이터를 삭제합니다. 계속하시겠습니까?` : ''}
-        confirmLabel={deleteUploadHistoryMutation.isPending ? '삭제 중...' : '삭제'}
-        danger
-        onConfirm={() => {
-          if (deleteTarget !== null) {
-            deleteUploadHistoryMutation.mutate(deleteTarget.id)
-            setDeleteTarget(null)
-          }
-        }}
-        onCancel={() => setDeleteTarget(null)}
-      />
     </div>
   )
 }
